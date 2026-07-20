@@ -1,0 +1,61 @@
+body{
+
+    width:650px;
+
+    font-family:Arial;
+
+    padding:10px;
+
+}
+
+h2{
+
+    margin-top:0;
+
+}
+
+#resumo{
+
+    margin:10px 0;
+
+    font-weight:bold;
+
+}
+
+button{
+
+    width:100%;
+
+    padding:8px;
+
+    margin-bottom:10px;
+
+    cursor:pointer;
+
+}
+
+table{
+
+    width:100%;
+
+    border-collapse:collapse;
+
+    font-size:12px;
+
+}
+
+th{
+
+    background:#efefef;
+
+}
+
+th,td{
+
+    border:1px solid #ddd;
+
+    padding:4px;
+
+    text-align:left;
+
+}
