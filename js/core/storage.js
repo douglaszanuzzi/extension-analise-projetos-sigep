@@ -6,10 +6,14 @@ const Storage = {
 
         const dados = await chrome.storage.local.get(this.CHAVE);
 
-        return dados[this.CHAVE] || {
+        const salvos = dados[this.CHAVE] || {
             ultimoAnalista: null,
             distribuicao: {}
         };
+
+        salvos.distribuicao = salvos.distribuicao || {};
+
+        return salvos;
 
     },
 

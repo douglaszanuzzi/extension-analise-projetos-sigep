@@ -1,4 +1,4 @@
-console.log("✅ content.js carregado");
+console.log("content.js carregado");
 
 chrome.runtime.onMessage.addListener(
 
@@ -6,47 +6,59 @@ chrome.runtime.onMessage.addListener(
 
         console.log("Mensagem recebida:", request);
 
-        switch (request.action) {
+        (async () => {
 
-            case "inspecionar":
+            switch (request.action) {
 
-                sendResponse(
-                    BSITInspector.inspecionarPagina()
-                );
+                case "inspecionar":
 
-                break;
+                    sendResponse(
+                        BSITInspector.inspecionarPagina()
+                    );
 
-            case "analisarTabela":
+                    break;
 
-                sendResponse(
-                    BSITInspector.analisarTabelaPrincipal()
-                );
+                case "analisarTabela":
 
-                break;
+                    sendResponse(
+                        await BSITInspector.analisarTabelaPrincipal()
+                    );
 
-            case "analisarLinha":
+                    break;
 
-                sendResponse(
-                    BSITInspector.analisarPrimeiraLinha()
-                );
+                case "analisarLinha":
 
-                break;
+                    sendResponse(
+                        BSITInspector.analisarPrimeiraLinha()
+                    );
 
-            case "testarAcoes":
+                    break;
 
-                sendResponse(
-                    BSITInspector.testarAcoes()
-                );
+                case "testarAcoes":
 
-                break;
+                    sendResponse(
+                        BSITInspector.testarAcoes()
+                    );
 
-            default:
+                    break;
 
-                sendResponse({
-                    erro: "Ação desconhecida."
-                });
+                default:
 
-        }
+                    sendResponse({
+                        erro: "Acao desconhecida."
+                    });
+
+            }
+
+        })().catch(erro => {
+
+            console.error("Erro ao processar mensagem:", erro);
+
+            sendResponse({
+                erro: erro.message
+            });
+
+        });
 
         return true;
 

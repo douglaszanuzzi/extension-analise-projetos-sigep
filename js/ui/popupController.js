@@ -1,36 +1,124 @@
 import { Logger } from "../core/logger.js";
-import { Storage } from "../core/storage.js";
-async function testeStorage() {
 
-    Logger.info("================================");
-    Logger.info("TESTE DO STORAGE");
-    Logger.info("================================");
+let ultimasAnalises = [];
 
-    const dadosTeste = {
+function obterAnalistaSelecionado() {
 
-        ultimoAnalista: "Douglas",
+    const filtro =
+        document.getElementById("filtroAnalista");
 
-        distribuicao: {
+    return filtro?.value || "";
 
-            "26004": "Douglas",
-            "26005": "Gabriel",
-            "26006": "Douglas"
+}
+
+function renderizarAnalises(analises) {
+
+    const tbody =
+        document.querySelector(
+            "#tblAnalises tbody"
+        );
+
+    tbody.innerHTML = "";
+
+    const analistaSelecionado =
+        obterAnalistaSelecionado();
+
+    const filtradas = analistaSelecionado
+        ? analises.filter(
+            item => item.responsavel === analistaSelecionado
+        )
+        : analises;
+
+    filtradas.forEach(item => {
+
+        const tr =
+            document.createElement("tr");
+
+        if (item.responsavel) {
+
+            tr.classList.add(
+                `linha-${item.responsavel.toLowerCase()}`
+            );
 
         }
 
-    };
+        [
+            item.proprietario,
+            item.area,
+            item.usoImovel,
+            item.tipo
+        ].forEach(valor => {
 
-    await Storage.salvar(dadosTeste);
+            const td =
+                document.createElement("td");
 
-    const dados = await Storage.carregar();
+            td.textContent = valor || "";
 
-    console.table(dados.distribuicao);
+            tr.appendChild(td);
 
-    Logger.info(dados);
+        });
 
-    Logger.info("================================");
+        const tdResponsavel =
+            document.createElement("td");
+
+        tdResponsavel.textContent = item.responsavel || "";
+
+        if (item.responsavel) {
+
+            tdResponsavel.classList.add("responsavel");
+
+        }
+
+        tr.appendChild(tdResponsavel);
+
+        const tdAcao =
+            document.createElement("td");
+
+        const botaoAbrir =
+            document.createElement("button");
+
+        botaoAbrir.type = "button";
+        botaoAbrir.className = "btnAbrirObra";
+        botaoAbrir.textContent = "Abrir";
+        botaoAbrir.disabled = !item.urlObra;
+
+        botaoAbrir.addEventListener("click", () => {
+
+            if (!item.urlObra) {
+                return;
+            }
+
+            chrome.tabs.create({
+                url: item.urlObra
+            });
+
+        });
+
+        tdAcao.appendChild(botaoAbrir);
+
+        tr.appendChild(tdAcao);
+
+        tbody.appendChild(tr);
+
+    });
 
 }
+
+function contarPorResponsavel(analises) {
+
+    return analises.reduce((totais, item) => {
+
+        const responsavel = item.responsavel || "Sem responsavel";
+
+        totais[responsavel] =
+            (totais[responsavel] || 0) + 1;
+
+        return totais;
+
+    }, {});
+
+}
+
 async function enviarAcao(acao) {
     console.log("AÇÃO ENVIADA:", acao);
     const [tab] = await chrome.tabs.query({
@@ -86,10 +174,25 @@ async function enviarAcao(acao) {
             if (acao === "testarAcoes") {
                 return;
             }
+
+            if (resposta.erro) {
+
+                const resumo =
+                    document.getElementById("resumo");
+
+                resumo.textContent = resposta.erro;
+
+                return;
+
+            }
+
             //-----------------------------------------
 
             const resumo =
                 document.getElementById("resumo");
+
+            const totaisPorResponsavel =
+                contarPorResponsavel(resposta.analises);
 
             resumo.innerHTML = `
 
@@ -101,35 +204,23 @@ async function enviarAcao(acao) {
                 <strong>Total:</strong>
                 ${resposta.resumo.total}
 
+                <br>
+
+                <strong>Douglas:</strong>
+                ${totaisPorResponsavel.Douglas || 0}
+
+                |
+
+                <strong>Gabriel:</strong>
+                ${totaisPorResponsavel.Gabriel || 0}
+
             `;
 
             //-----------------------------------------
 
-            const tbody =
-                document.querySelector(
-                    "#tblAnalises tbody"
-                );
+            ultimasAnalises = resposta.analises;
 
-            tbody.innerHTML = "";
-
-            //-----------------------------------------
-
-            resposta.analises.forEach(item => {
-
-                const tr =
-                    document.createElement("tr");
-
-                tr.innerHTML = `
-                    <td>${item.proprietario}</td>
-                    <td>${item.area}</td>
-                    <td>${item.usoImovel}</td>
-                    <td>${item.tipo}</td>
-                     <td>${item.responsavel}</td>
-                `;
-
-                tbody.appendChild(tr);
-
-            });
+            renderizarAnalises(ultimasAnalises);
 
         }
 
@@ -138,7 +229,7 @@ async function enviarAcao(acao) {
 }
 
 export async function iniciarPopup() {
-    await testeStorage();
+
     Logger.info("Popup iniciado.");
 
     document
@@ -152,13 +243,11 @@ export async function iniciarPopup() {
     );
     document
 
-    .getElementById("btnTestarAcoes")
+        .getElementById("filtroAnalista")
+        .addEventListener(
 
-    .addEventListener(
-
-        "click",
-
-        () => enviarAcao("testarAcoes")
+            "change",
+            () => renderizarAnalises(ultimasAnalises)
 
     );
 

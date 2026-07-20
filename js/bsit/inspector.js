@@ -75,10 +75,6 @@ const BSITInspector = {
 
         let buildingConstructionId = null;
 
-        const menus = document.querySelectorAll(
-            '[onclick*="buildingConstruction-id"]'
-        );
-
         const menu = menus[indice];
 
         if (menu) {
@@ -99,13 +95,11 @@ const BSITInspector = {
 
             semAnalise++;
 
-             console.log({
-                buildingConstructionId,
-                proprietario: td[2].innerText.trim()
-             });
-            
             analises.push({
                 buildingConstructionId,
+                urlObra: buildingConstructionId
+                    ? `${window.location.origin}/manager/tax-management/register/building-construction.jsf?buildingConstruction-id=${buildingConstructionId}`
+                    : "",
                 proprietario: td[2].innerText.trim(),
                 area: td[5].innerText.trim(),
                 usoImovel: td[6].innerText.trim(),
@@ -125,6 +119,8 @@ const BSITInspector = {
         }
 
     });
+
+        await Distribution.distribuir(analises);
 
         return {
 

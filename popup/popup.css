@@ -34,6 +34,38 @@ button{
 
 }
 
+.btnAbrirObra{
+
+    width:auto;
+
+    padding:4px 8px;
+
+    margin-bottom:0;
+
+}
+
+label{
+
+    display:block;
+
+    margin-bottom:4px;
+
+    font-size:12px;
+
+    font-weight:bold;
+
+}
+
+select{
+
+    width:100%;
+
+    padding:8px;
+
+    margin-bottom:10px;
+
+}
+
 table{
 
     width:100%;
@@ -57,5 +89,37 @@ th,td{
     padding:4px;
 
     text-align:left;
+
+}
+
+.responsavel{
+
+    font-weight:bold;
+
+    text-align:center;
+
+}
+
+.linha-douglas{
+
+    background:#cfe5ff;
+
+}
+
+.linha-gabriel{
+
+    background:#d6f2d8;
+
+}
+
+.linha-douglas .responsavel{
+
+    color:#073b6d;
+
+}
+
+.linha-gabriel .responsavel{
+
+    color:#15571a;
 
 }

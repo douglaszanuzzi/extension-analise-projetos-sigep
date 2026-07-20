@@ -33,6 +33,14 @@ const Distribution = {
 
             const id = processo.buildingConstructionId;
 
+            if (!id) {
+
+                processo.responsavel = "";
+
+                continue;
+
+            }
+
             if (distribuicao[id]) {
 
                 processo.responsavel =
@@ -58,7 +66,9 @@ const Distribution = {
         // Remove processos que já saíram da fila
 
         const idsAtuais = new Set(
-            processos.map(p => p.buildingConstructionId)
+            processos
+                .map(p => p.buildingConstructionId)
+                .filter(Boolean)
         );
 
         Object.keys(distribuicao).forEach(id => {
