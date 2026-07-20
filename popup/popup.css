@@ -1,101 +1,259 @@
+*{
+
+    box-sizing:border-box;
+
+}
+
 body{
 
-    width:650px;
+    min-width:360px;
+    margin:0;
+    padding:16px;
+    font-family:Arial, sans-serif;
+    color:#172033;
+    background:#f5f7fa;
 
-    font-family:Arial;
+}
 
+.topo{
+
+    margin-bottom:14px;
+
+}
+
+h1{
+
+    margin:0;
+    font-size:20px;
+    line-height:1.2;
+
+}
+
+.topo p{
+
+    margin:4px 0 0;
+    color:#5d6878;
+    font-size:12px;
+
+}
+
+.resumo{
+
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap:8px;
+    margin-bottom:14px;
+
+}
+
+.resumoItem{
+
+    min-height:68px;
     padding:10px;
+    border:1px solid #d9e0ea;
+    border-radius:8px;
+    background:#ffffff;
 
 }
 
-h2{
+.resumoItem span{
 
-    margin-top:0;
+    display:block;
+    margin-bottom:6px;
+    color:#687487;
+    font-size:11px;
+    text-transform:uppercase;
 
 }
 
-#resumo{
+.resumoItem strong{
 
-    margin:10px 0;
+    display:block;
+    font-size:24px;
+    line-height:1;
 
-    font-weight:bold;
+}
+
+.resumoDouglas{
+
+    border-color:#8bbdf3;
+
+}
+
+.resumoGabriel{
+
+    border-color:#91d99a;
+
+}
+
+.controles{
+
+    display:grid;
+    grid-template-columns:1fr;
+    gap:6px;
+    margin-bottom:10px;
+
+}
+
+button,
+select{
+
+    width:100%;
+    min-height:36px;
+    border:1px solid #b8c3d1;
+    border-radius:6px;
+    font-size:13px;
 
 }
 
 button{
 
-    width:100%;
-
-    padding:8px;
-
-    margin-bottom:10px;
-
+    color:#ffffff;
+    background:#1d4f8f;
     cursor:pointer;
 
 }
 
-.btnAbrirObra{
+button:hover{
 
-    width:auto;
+    background:#163f72;
 
-    padding:4px 8px;
+}
 
-    margin-bottom:0;
+button:disabled{
+
+    color:#778294;
+    background:#e5e9ef;
+    cursor:not-allowed;
 
 }
 
 label{
 
-    display:block;
-
-    margin-bottom:4px;
-
+    margin-top:4px;
+    color:#4f5b6d;
     font-size:12px;
-
     font-weight:bold;
 
 }
 
 select{
 
-    width:100%;
+    padding:0 8px;
+    color:#172033;
+    background:#ffffff;
 
-    padding:8px;
+}
 
+.legenda{
+
+    display:flex;
+    gap:12px;
+    align-items:center;
     margin-bottom:10px;
+    color:#566275;
+    font-size:12px;
+
+}
+
+.legenda span{
+
+    display:inline-flex;
+    gap:6px;
+    align-items:center;
+
+}
+
+.marcador{
+
+    width:12px;
+    height:12px;
+    border-radius:3px;
+    display:inline-block;
+
+}
+
+.marcadorDouglas{
+
+    background:#cfe5ff;
+    border:1px solid #8bbdf3;
+
+}
+
+.marcadorGabriel{
+
+    background:#d6f2d8;
+    border:1px solid #91d99a;
+
+}
+
+.mensagem{
+
+    display:none;
+    margin:0 0 10px;
+    padding:10px;
+    border:1px solid #d9e0ea;
+    border-radius:8px;
+    color:#4f5b6d;
+    background:#ffffff;
+    font-size:13px;
+
+}
+
+.mensagem.visivel{
+
+    display:block;
+
+}
+
+.tabelaContainer{
+
+    overflow:auto;
+    border:1px solid #d9e0ea;
+    border-radius:8px;
+    background:#ffffff;
 
 }
 
 table{
 
     width:100%;
-
     border-collapse:collapse;
-
     font-size:12px;
 
 }
 
 th{
 
-    background:#efefef;
+    position:sticky;
+    top:0;
+    z-index:1;
+    background:#eef2f6;
+    color:#465266;
+    font-size:11px;
+    text-transform:uppercase;
 
 }
 
-th,td{
+th,
+td{
 
-    border:1px solid #ddd;
-
-    padding:4px;
-
+    padding:8px;
+    border-bottom:1px solid rgba(120, 132, 150, 0.22);
     text-align:left;
+    vertical-align:middle;
+
+}
+
+tbody tr:hover{
+
+    filter:brightness(0.98);
 
 }
 
 .responsavel{
 
     font-weight:bold;
-
     text-align:center;
 
 }
@@ -121,5 +279,23 @@ th,td{
 .linha-gabriel .responsavel{
 
     color:#15571a;
+
+}
+
+.btnAbrirObra{
+
+    width:auto;
+    min-height:28px;
+    padding:0 10px;
+    color:#1d4f8f;
+    background:#ffffff;
+    border-color:#8aa9d3;
+
+}
+
+.btnAbrirObra:hover{
+
+    color:#ffffff;
+    background:#1d4f8f;
 
 }

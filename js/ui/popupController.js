@@ -11,6 +11,51 @@ function obterAnalistaSelecionado() {
 
 }
 
+function mostrarMensagem(mensagem) {
+
+    const elementoMensagem =
+        document.getElementById("mensagem");
+
+    const tbody =
+        document.querySelector(
+            "#tblAnalises tbody"
+        );
+
+    elementoMensagem.textContent = mensagem;
+    elementoMensagem.classList.add("visivel");
+
+    tbody.innerHTML = "";
+
+}
+
+function esconderMensagem() {
+
+    const elementoMensagem =
+        document.getElementById("mensagem");
+
+    elementoMensagem.textContent = "";
+    elementoMensagem.classList.remove("visivel");
+
+}
+
+function traduzirErro(mensagem) {
+
+    if (mensagem.includes("Receiving end does not exist")) {
+
+        return "Abra a tela de analises do BSIT, recarregue a pagina e tente novamente.";
+
+    }
+
+    if (mensagem.includes("Tabela principal")) {
+
+        return "Tabela de analises nao encontrada. Abra a tela da fila de analises do BSIT.";
+
+    }
+
+    return mensagem;
+
+}
+
 function renderizarAnalises(analises) {
 
     const tbody =
@@ -28,6 +73,18 @@ function renderizarAnalises(analises) {
             item => item.responsavel === analistaSelecionado
         )
         : analises;
+
+    if (!filtradas.length) {
+
+        mostrarMensagem(
+            "Nenhuma analise encontrada para este filtro."
+        );
+
+        return;
+
+    }
+
+    esconderMensagem();
 
     filtradas.forEach(item => {
 
@@ -79,7 +136,7 @@ function renderizarAnalises(analises) {
 
         botaoAbrir.type = "button";
         botaoAbrir.className = "btnAbrirObra";
-        botaoAbrir.textContent = "Abrir";
+        botaoAbrir.textContent = "Acessar";
         botaoAbrir.disabled = !item.urlObra;
 
         botaoAbrir.addEventListener("click", () => {
@@ -101,6 +158,25 @@ function renderizarAnalises(analises) {
         tbody.appendChild(tr);
 
     });
+
+}
+
+function atualizarResumo(resumo, analises) {
+
+    const totaisPorResponsavel =
+        contarPorResponsavel(analises);
+
+    document.getElementById("totalPendentes").textContent =
+        resumo.semAnalise;
+
+    document.getElementById("totalGeral").textContent =
+        resumo.total;
+
+    document.getElementById("totalDouglas").textContent =
+        totaisPorResponsavel.Douglas || 0;
+
+    document.getElementById("totalGabriel").textContent =
+        totaisPorResponsavel.Gabriel || 0;
 
 }
 
@@ -130,6 +206,10 @@ async function enviarAcao(acao) {
 
         Logger.error("Nenhuma aba ativa.");
 
+        mostrarMensagem(
+            "Nenhuma aba ativa encontrada."
+        );
+
         return;
 
     }
@@ -151,6 +231,11 @@ async function enviarAcao(acao) {
             if (chrome.runtime.lastError) {
 
                 Logger.error(chrome.runtime.lastError.message);
+
+                mostrarMensagem(
+                    traduzirErro(chrome.runtime.lastError.message)
+                );
+
                 return;
 
             }
@@ -159,6 +244,10 @@ async function enviarAcao(acao) {
 
                 console.error("Resposta veio undefined.");
 
+                mostrarMensagem(
+                    "Nao foi possivel obter resposta da pagina do BSIT."
+                );
+
                 return;
 
             }
@@ -166,6 +255,10 @@ async function enviarAcao(acao) {
 
                 Logger.error(
                     chrome.runtime.lastError.message
+                );
+
+                mostrarMensagem(
+                    traduzirErro(chrome.runtime.lastError.message)
                 );
 
                 return;
@@ -177,10 +270,9 @@ async function enviarAcao(acao) {
 
             if (resposta.erro) {
 
-                const resumo =
-                    document.getElementById("resumo");
-
-                resumo.textContent = resposta.erro;
+                mostrarMensagem(
+                    traduzirErro(resposta.erro)
+                );
 
                 return;
 
@@ -188,33 +280,10 @@ async function enviarAcao(acao) {
 
             //-----------------------------------------
 
-            const resumo =
-                document.getElementById("resumo");
-
-            const totaisPorResponsavel =
-                contarPorResponsavel(resposta.analises);
-
-            resumo.innerHTML = `
-
-                <strong>Pendentes:</strong>
-                ${resposta.resumo.semAnalise}
-
-                <br>
-
-                <strong>Total:</strong>
-                ${resposta.resumo.total}
-
-                <br>
-
-                <strong>Douglas:</strong>
-                ${totaisPorResponsavel.Douglas || 0}
-
-                |
-
-                <strong>Gabriel:</strong>
-                ${totaisPorResponsavel.Gabriel || 0}
-
-            `;
+            atualizarResumo(
+                resposta.resumo,
+                resposta.analises
+            );
 
             //-----------------------------------------
 

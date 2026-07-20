@@ -13,63 +13,125 @@
 
 <body>
 
-    <h2>Habitese Robot</h2>
+    <header class="topo">
 
-    <div id="resumo">
+        <div>
 
-        Carregando...
+            <h1>Analises Pendentes</h1>
+
+            <p>Distribuicao automatica por responsavel</p>
+
+        </div>
+
+    </header>
+
+    <section id="resumo" class="resumo" aria-live="polite">
+
+        <div class="resumoItem">
+
+            <span>Pendentes</span>
+
+            <strong id="totalPendentes">0</strong>
+
+        </div>
+
+        <div class="resumoItem">
+
+            <span>Total</span>
+
+            <strong id="totalGeral">0</strong>
+
+        </div>
+
+        <div class="resumoItem resumoDouglas">
+
+            <span>Douglas</span>
+
+            <strong id="totalDouglas">0</strong>
+
+        </div>
+
+        <div class="resumoItem resumoGabriel">
+
+            <span>Gabriel</span>
+
+            <strong id="totalGabriel">0</strong>
+
+        </div>
+
+    </section>
+
+    <section class="controles">
+
+        <button id="btnTabela" type="button">
+
+            Atualizar
+
+        </button>
+
+        <label for="filtroAnalista">
+
+            Analista
+
+        </label>
+
+        <select id="filtroAnalista">
+
+            <option value="">Todos</option>
+
+            <option value="Douglas">Douglas</option>
+
+            <option value="Gabriel">Gabriel</option>
+
+        </select>
+
+    </section>
+
+    <section class="legenda" aria-label="Legenda de responsaveis">
+
+        <span><i class="marcador marcadorDouglas"></i>Douglas</span>
+
+        <span><i class="marcador marcadorGabriel"></i>Gabriel</span>
+
+    </section>
+
+    <p id="mensagem" class="mensagem visivel">
+
+        Clique em Atualizar para carregar as analises.
+
+    </p>
+
+    <div class="tabelaContainer">
+
+        <table id="tblAnalises">
+
+            <thead>
+
+                <tr>
+
+                    <th>Proprietario</th>
+
+                    <th>Area</th>
+
+                    <th>Uso</th>
+
+                    <th>Tipo</th>
+
+                    <th>Responsavel</th>
+
+                    <th>Acesso</th>
+
+                </tr>
+
+            </thead>
+
+            <tbody>
+
+            </tbody>
+
+        </table>
 
     </div>
-
-    <button id="btnTabela">
-
-        Atualizar
-
-    </button>
-
-    <label for="filtroAnalista">
-
-        Filtrar por analista
-
-    </label>
-
-    <select id="filtroAnalista">
-
-        <option value="">Todos</option>
-
-        <option value="Douglas">Douglas</option>
-
-        <option value="Gabriel">Gabriel</option>
-
-    </select>
-
-    <table id="tblAnalises">
-
-        <thead>
-
-            <tr>
-
-                <th>Proprietario</th>
-
-                <th>Area</th>
-
-                <th>Uso</th>
-
-                <th>Tipo</th>
-
-                <th>Responsavel</th>
-
-                <th>Abrir</th>
-
-            </tr>
-
-        </thead>
-
-        <tbody>
-
-        </tbody>
-
-    </table>
 
     <script type="module" src="popup.js"></script>
 
