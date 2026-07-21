@@ -143,41 +143,116 @@ const NotificationInspector = {
 
 const NotificationService = {
 
-    abrirPopup() {
+    MAX_WAIT_MS: 5000,
 
-        return Promise.resolve(
-            NotificationInspector.localizarContainer()
-        );
+    localizarBotao() {
+
+        const idBotao = "headerActions:commandLinkNotifications";
+
+        const botao = document.getElementById(idBotao)
+            || document.querySelector(
+                "#headerActions\\:commandLinkNotifications"
+            );
+
+        if (!botao) {
+            console.error("[Habitese] Botão de notificações não encontrado.");
+        }
+
+        return botao;
+
+    },
+
+    popupEstaVisivel() {
+
+        const popup = document.getElementById("notificationModal");
+        const popupContainer = document.getElementById("notificationModalContainer");
+
+        if (!popup && !popupContainer) {
+            return false;
+        }
+
+        const displayPopup = popup
+            ? window.getComputedStyle(popup).display
+            : "none";
+
+        const displayContainer = popupContainer
+            ? window.getComputedStyle(popupContainer).display
+            : "none";
+
+        return displayPopup !== "none"
+            || displayContainer !== "none";
+
+    },
+
+    async abrirPopup() {
+
+        const popupJaAberta = this.popupEstaVisivel();
+
+        if (popupJaAberta) {
+            return {
+                aberta: true
+            };
+        }
+
+        const botao = this.localizarBotao();
+
+        if (!botao && typeof window.Richfaces?.showModalPanel !== "function") {
+            return {
+                erro: "Botão de notificações e API pública do RichFaces não encontradas."
+            };
+        }
+
+        if (typeof window.Richfaces?.showModalPanel === "function") {
+            window.Richfaces.showModalPanel("notificationModal");
+        } else {
+            botao.click();
+        }
+
+        return this.aguardarPopup();
 
     },
 
     aguardarPopup() {
 
-        return new Promise(resolve => {
+        return new Promise((resolve, reject) => {
 
-            const container =
-                NotificationInspector.localizarContainer();
+            const popup = document.getElementById("notificationModal");
+            const popupContainer = document.getElementById("notificationModalContainer");
 
-            if (container) {
-                resolve(container);
+            const jaVisivel = this.popupEstaVisivel();
+
+            if (jaVisivel) {
+                resolve({ popup, popupContainer });
                 return;
             }
 
-            const observer = new MutationObserver(() => {
+            let observer = null;
 
-                const encontrado =
-                    NotificationInspector.localizarContainer();
-
-                if (encontrado) {
+            const timeoutId = window.setTimeout(() => {
+                if (observer) {
                     observer.disconnect();
-                    resolve(encontrado);
+                }
+                console.error("[Habitese] Timeout aguardando popup de notificações.");
+                reject(new Error("Timeout aguardando popup de notificações."));
+            }, this.MAX_WAIT_MS);
+
+            observer = new MutationObserver(() => {
+
+                const visivel = this.popupEstaVisivel();
+
+                if (visivel) {
+                    window.clearTimeout(timeoutId);
+                    observer.disconnect();
+                    resolve({ popup, popupContainer });
                 }
 
             });
 
             observer.observe(document.body, {
                 childList: true,
-                subtree: true
+                subtree: true,
+                attributes: true,
+                attributeFilter: ["style", "class"]
             });
 
         });
@@ -190,7 +265,70 @@ const NotificationService = {
 
     },
 
+    async obterNotificacoes() {
+
+        let popupJaAberta = false;
+
+        try {
+
+            popupJaAberta = this.popupEstaVisivel();
+
+            if (!popupJaAberta) {
+
+                const abertura = await this.abrirPopup();
+
+                if (abertura && abertura.erro) {
+                    return abertura;
+                }
+
+            }
+
+            await this.aguardarPopup();
+
+            const resultado = this.extrairNotificacoes();
+
+            if (!resultado || resultado.erro) {
+                console.error("[Habitese] Erro ao ler popup de notificações.", resultado?.erro || "Erro desconhecido.");
+                return resultado || {
+                    erro: "Erro ao ler popup de notificações."
+                };
+            }
+
+            if (!resultado.notificacoes || !resultado.notificacoes.length) {
+                console.warn("[Habitese] Popup de notificações aberta, mas sem dados.");
+            }
+
+            return resultado;
+
+        } catch (erro) {
+
+            console.error("[Habitese] Falha ao automatizar notificações.", erro);
+
+            return {
+                erro: erro.message
+            };
+
+        } finally {
+
+            await this.fecharPopup();
+
+        }
+
+    },
+
     fecharPopup() {
+
+        if (typeof window.Richfaces?.hideModalPanel === "function") {
+            window.Richfaces.hideModalPanel("notificationModal");
+            return Promise.resolve(true);
+        }
+
+        const botaoFechar = document.getElementById("notificationModalHidelink");
+
+        if (botaoFechar && typeof botaoFechar.click === "function") {
+            botaoFechar.click();
+            return Promise.resolve(true);
+        }
 
         return Promise.resolve(true);
 
