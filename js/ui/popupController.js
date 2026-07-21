@@ -1,7 +1,12 @@
 import { Logger } from "../core/logger.js";
+import {
+    NotificationGroupingService,
+    NOTIFICATION_GROUP_STATUS
+} from "../bsit/notificationGroupingService.js";
 
 let ultimasAnalises = [];
 let abaAtiva = "analises";
+let gruposNotificacoes = [];
 
 function obterAnalistaSelecionado() {
 
@@ -189,53 +194,156 @@ function alternarAba(novaAba) {
 
 }
 
-function renderizarNotificacoes(notificacoes = []) {
+async function atualizarStatusGrupo(grupoId, status) {
 
-    const tbody = document.querySelector("#tblNotificacoes tbody");
+    const grupoSelecionado = gruposNotificacoes.find(grupo => grupo.id === grupoId);
 
-    if (!tbody) {
+    if (!grupoSelecionado) {
         return;
     }
 
-    tbody.innerHTML = "";
+    await NotificationGroupingService.atualizarStatus(grupoSelecionado.id, status);
+    grupoSelecionado.status = status;
+    renderizarNotificacoes(gruposNotificacoes);
 
-    if (!notificacoes.length) {
+}
 
-        const tr = document.createElement("tr");
-        const td = document.createElement("td");
+function obterFiltroStatusNotificacoes() {
 
-        td.colSpan = 4;
-        td.textContent = "Nenhuma notificação encontrada na popup aberta.";
+    const filtro = document.getElementById("filtroStatusNotificacoes");
+    return filtro?.value || "ALL";
 
-        tr.appendChild(td);
-        tbody.appendChild(tr);
+}
 
+function classStatus(status = NOTIFICATION_GROUP_STATUS.NEW) {
+
+    if (status === NOTIFICATION_GROUP_STATUS.PENDING) {
+        return "aguardando";
+    }
+
+    if (status === NOTIFICATION_GROUP_STATUS.DONE) {
+        return "concluido";
+    }
+
+    if (status === NOTIFICATION_GROUP_STATUS.ARCHIVED) {
+        return "arquivado";
+    }
+
+    return "novo";
+
+}
+
+function formatarPeriodo(grupo) {
+
+    if (!grupo.dataInicio || !grupo.dataFim) {
+        return "";
+    }
+
+    return `${grupo.dataInicio} às ${grupo.dataFim}`;
+
+}
+
+function criarBotaoAcao(texto, status, grupoId) {
+
+    const botao = document.createElement("button");
+    botao.type = "button";
+    botao.textContent = texto;
+    botao.dataset.grupoId = grupoId;
+    botao.addEventListener("click", async () => {
+        await atualizarStatusGrupo(grupoId, status);
+    });
+
+    return botao;
+
+}
+
+function renderizarNotificacoes(grupos = []) {
+
+    gruposNotificacoes = grupos;
+
+    const container = document.getElementById("listaGruposNotificacoes");
+
+    if (!container) {
+        return;
+    }
+
+    container.innerHTML = "";
+
+    const filtro = obterFiltroStatusNotificacoes();
+
+    const gruposVisiveis = grupos.filter(grupo => {
+
+        if (filtro === "ALL") {
+            return grupo.status !== NOTIFICATION_GROUP_STATUS.ARCHIVED;
+        }
+
+        return grupo.status === filtro;
+
+    });
+
+    if (!gruposVisiveis.length) {
+
+        const mensagem = document.createElement("p");
+        mensagem.className = "mensagem visivel";
+        mensagem.textContent = "Nenhum grupo encontrado para esse filtro.";
+        container.appendChild(mensagem);
         return;
 
     }
 
-    notificacoes.forEach(item => {
+    gruposVisiveis.forEach(grupo => {
 
-        const tr = document.createElement("tr");
+        const card = document.createElement("article");
+        card.className = "grupoNotificacao";
 
-        const tdCci = document.createElement("td");
-        tdCci.textContent = item.cci || "";
+        const cabecalho = document.createElement("div");
+        cabecalho.className = "grupoCabecalho";
 
-        const tdProprietario = document.createElement("td");
-        tdProprietario.textContent = item.proprietario || "";
+        const titulo = document.createElement("h3");
+        titulo.className = "grupoTitulo";
+        titulo.textContent = `📁 CCI ${grupo.cci || "-"}`;
 
-        const tdArquivo = document.createElement("td");
-        tdArquivo.textContent = item.arquivo || "";
+        const statusBadge = document.createElement("span");
+        statusBadge.className = `grupoStatusBadge ${classStatus(grupo.status)}`;
+        statusBadge.textContent = NotificationGroupingService.statusTexto(grupo.status);
 
-        const tdData = document.createElement("td");
-        tdData.textContent = item.data || "";
+        const meta = document.createElement("div");
+        meta.className = "grupoMeta";
+        meta.textContent = `${grupo.proprietario || "-"} · ${formatarPeriodo(grupo)}`;
 
-        tr.appendChild(tdCci);
-        tr.appendChild(tdProprietario);
-        tr.appendChild(tdArquivo);
-        tr.appendChild(tdData);
+        const arquivos = document.createElement("div");
+        arquivos.className = "grupoArquivos";
+        arquivos.textContent = `${NotificationGroupingService.contarArquivos(grupo)} arquivos`;
 
-        tbody.appendChild(tr);
+        const lista = document.createElement("ul");
+        lista.className = "grupoLista";
+
+        (grupo.notificacoes || []).forEach(notificacao => {
+
+            const item = document.createElement("li");
+            item.textContent = notificacao.arquivo || notificacao.titulo || "Notificação";
+            lista.appendChild(item);
+
+        });
+
+        const acoes = document.createElement("div");
+        acoes.className = "grupoAcoes";
+
+        acoes.appendChild(criarBotaoAcao("✔ Concluir", NOTIFICATION_GROUP_STATUS.DONE, grupo.id));
+        acoes.appendChild(criarBotaoAcao("⏳ Aguardar", NOTIFICATION_GROUP_STATUS.PENDING, grupo.id));
+        acoes.appendChild(criarBotaoAcao("↩ Não lido", NOTIFICATION_GROUP_STATUS.NEW, grupo.id));
+        acoes.appendChild(criarBotaoAcao("📦 Arquivar", NOTIFICATION_GROUP_STATUS.ARCHIVED, grupo.id));
+
+        cabecalho.appendChild(titulo);
+        cabecalho.appendChild(statusBadge);
+
+        card.appendChild(cabecalho);
+        card.appendChild(meta);
+        card.appendChild(arquivos);
+        card.appendChild(lista);
+        card.appendChild(acoes);
+
+        container.appendChild(card);
 
     });
 
@@ -262,7 +370,7 @@ async function carregarNotificacoes() {
             action: "obterNotificacoes"
         },
 
-        resposta => {
+        async resposta => {
 
             if (chrome.runtime.lastError) {
                 Logger.error(chrome.runtime.lastError.message);
@@ -280,7 +388,8 @@ async function carregarNotificacoes() {
                 return;
             }
 
-            renderizarNotificacoes(resposta.notificacoes || []);
+            const grupos = await NotificationGroupingService.sincronizarGrupos(resposta.notificacoes || []);
+            renderizarNotificacoes(grupos);
 
         }
 
@@ -446,6 +555,16 @@ export async function iniciarPopup() {
                 await carregarNotificacoes();
 
             }
+
+    );
+
+    document
+
+        .getElementById("filtroStatusNotificacoes")
+        .addEventListener(
+
+            "change",
+            () => renderizarNotificacoes(gruposNotificacoes)
 
     );
 

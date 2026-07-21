@@ -147,31 +147,27 @@
 
     <section id="viewNotificacoes" class="viewPainel oculto">
 
-        <div class="tabelaContainer">
+        <section class="controles controlesNotificacoes">
 
-            <table id="tblNotificacoes">
+            <label for="filtroStatusNotificacoes">
 
-                <thead>
+                Status
 
-                    <tr>
+            </label>
 
-                        <th>CCI</th>
+            <select id="filtroStatusNotificacoes">
 
-                        <th>Proprietário</th>
+                <option value="ALL">Todos</option>
+                <option value="NEW">Novos</option>
+                <option value="PENDING">Aguardando</option>
+                <option value="DONE">Concluídos</option>
+                <option value="ARCHIVED">Arquivados</option>
 
-                        <th>Arquivo</th>
+            </select>
 
-                        <th>Data</th>
+        </section>
 
-                    </tr>
-
-                </thead>
-
-                <tbody>
-
-                </tbody>
-
-            </table>
+        <div id="listaGruposNotificacoes" class="listaGruposNotificacoes">
 
         </div>
 

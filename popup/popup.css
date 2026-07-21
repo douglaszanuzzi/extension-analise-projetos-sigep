@@ -258,6 +258,122 @@ select{
 
 }
 
+.controlesNotificacoes{
+
+    margin-bottom:12px;
+
+}
+
+.listaGruposNotificacoes{
+
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+
+}
+
+.grupoNotificacao{
+
+    border:1px solid #d9e0ea;
+    border-radius:8px;
+    background:#ffffff;
+    padding:10px;
+
+}
+
+.grupoCabecalho{
+
+    display:flex;
+    justify-content:space-between;
+    gap:10px;
+    align-items:flex-start;
+    margin-bottom:8px;
+
+}
+
+.grupoTitulo{
+
+    margin:0 0 4px;
+    font-size:14px;
+    font-weight:bold;
+
+}
+
+.grupoMeta,
+.grupoStatusTxt,
+.grupoArquivos,
+.grupoLista,
+.grupoAcoes{
+
+    font-size:12px;
+    color:#4f5b6d;
+
+}
+
+.grupoStatusBadge{
+
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    padding:4px 8px;
+    border-radius:999px;
+    font-size:11px;
+    font-weight:bold;
+    background:#eef2f6;
+
+}
+
+.grupoStatusBadge.novo{
+
+    background:#dff6e8;
+    color:#186a37;
+
+}
+
+.grupoStatusBadge.aguardando{
+
+    background:#fff4d6;
+    color:#8a5a00;
+
+}
+
+.grupoStatusBadge.concluido{
+
+    background:#dbeafe;
+    color:#1d4ed8;
+
+}
+
+.grupoStatusBadge.arquivado{
+
+    background:#f3f4f6;
+    color:#6b7280;
+
+}
+
+.grupoLista{
+
+    margin:8px 0 0;
+    padding-left:18px;
+
+}
+
+.grupoAcoes{
+
+    display:grid;
+    grid-template-columns:repeat(2, 1fr);
+    gap:6px;
+    margin-top:10px;
+
+}
+
+.grupoAcoes button{
+
+    min-height:30px;
+    font-size:11px;
+
+}
+
 .tabelaContainer{
 
     overflow:auto;
