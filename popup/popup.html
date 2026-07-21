@@ -35,14 +35,6 @@
 
         </div>
 
-        <div class="resumoItem">
-
-            <span>Total</span>
-
-            <strong id="totalGeral">0</strong>
-
-        </div>
-
         <div class="resumoItem resumoDouglas">
 
             <span>Douglas</span>
@@ -61,33 +53,51 @@
 
     </section>
 
-    <section class="controles">
+    <nav class="abas" aria-label="Abas da extensão">
 
-        <button id="btnTabela" type="button">
+        <button id="abaAnalises" type="button" class="aba ativa">
 
-            Atualizar
+            Análises
 
         </button>
 
-        <label for="filtroAnalista">
+        <button id="abaNotificacoes" type="button" class="aba">
 
-            Analista
+            Notificações
 
-        </label>
+        </button>
 
-        <select id="filtroAnalista">
+    </nav>
 
-            <option value="">Todos</option>
+    <section id="viewAnalises" class="viewPainel visivel">
 
-            <option value="Douglas">Douglas</option>
+        <section class="controles">
 
-            <option value="Gabriel">Gabriel</option>
+            <button id="btnTabela" type="button">
 
-        </select>
+                Atualizar
 
-    </section>
+            </button>
 
-    <section class="legenda" aria-label="Legenda de responsaveis">
+            <label for="filtroAnalista">
+
+                Analista
+
+            </label>
+
+            <select id="filtroAnalista">
+
+                <option value="">Todos</option>
+
+                <option value="Douglas">Douglas</option>
+
+                <option value="Gabriel">Gabriel</option>
+
+            </select>
+
+        </section>
+
+        <section class="legenda" aria-label="Legenda de responsaveis">
 
         <span><i class="marcador marcadorDouglas"></i>Douglas</span>
 
@@ -95,43 +105,77 @@
 
     </section>
 
-    <p id="mensagem" class="mensagem visivel">
+        <p id="mensagem" class="mensagem visivel">
 
-        Clique em Atualizar para carregar as analises.
+            Clique em Atualizar para carregar as analises.
 
-    </p>
+        </p>
 
-    <div class="tabelaContainer">
+        <div class="tabelaContainer">
 
-        <table id="tblAnalises">
+            <table id="tblAnalises">
 
-            <thead>
+                <thead>
 
-                <tr>
+                    <tr>
 
-                    <th>Proprietario</th>
+                        <th>Proprietario</th>
 
-                    <th>Area</th>
+                        <th>Area</th>
 
-                    <th>Uso</th>
+                        <th>Uso</th>
 
-                    <th>Tipo</th>
+                        <th>Tipo</th>
 
-                    <th>Responsavel</th>
+                        <th>Responsavel</th>
 
-                    <th>Acesso</th>
+                        <th>Acesso</th>
 
-                </tr>
+                    </tr>
 
-            </thead>
+                </thead>
 
-            <tbody>
+                <tbody>
 
-            </tbody>
+                </tbody>
 
-        </table>
+            </table>
 
-    </div>
+        </div>
+
+    </section>
+
+    <section id="viewNotificacoes" class="viewPainel oculto">
+
+        <div class="tabelaContainer">
+
+            <table id="tblNotificacoes">
+
+                <thead>
+
+                    <tr>
+
+                        <th>CCI</th>
+
+                        <th>Proprietário</th>
+
+                        <th>Arquivo</th>
+
+                        <th>Data</th>
+
+                    </tr>
+
+                </thead>
+
+                <tbody>
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </section>
 
     <script type="module" src="popup.js"></script>
 

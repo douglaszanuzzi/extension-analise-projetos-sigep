@@ -30,6 +30,7 @@
       "js/core/storage.js",
       "js/core/distribution.js",
       "js/bsit/inspector.js",
+      "js/bsit/notificacoes.js",
       "content.js"
     ],
       "run_at": "document_idle"

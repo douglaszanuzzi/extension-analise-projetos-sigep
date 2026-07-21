@@ -1,0 +1,66 @@
+function formatCPF(component) {
+    $j = jQuery.noConflict();
+    $j(document).ready(function () {
+        try {
+            selector = eval(component);
+        } catch (e) {
+        }
+        $j(selector).mask('999.999.999-99');
+    });
+}
+
+// CNPJ alfanumerico (IN RFB 2.229/2024): 12 posicoes [0-9A-Z] + 2 digitos verificadores.
+// Definicao CENTRAL da mascara de CNPJ. Alterar aqui reflete em todas as telas.
+// jquery.maskedinput (DigitalBush): '*' = alfanumerico [A-Za-z0-9]; '9' = digito.
+var CNPJ_MASK_PATTERN = '**.***.***/****-99';
+var CNPJ_MASK_OPTS = {completed: function () { this.val(this.val().toUpperCase()); }};
+
+function formatCNPJ(component) {
+    $j = jQuery.noConflict();
+    $j(document).ready(function () {
+        try {
+            selector = eval(component);
+        } catch (e) {
+        }
+        $j(selector).mask(CNPJ_MASK_PATTERN, CNPJ_MASK_OPTS).on('keyup blur', function () {
+            this.value = this.value.toUpperCase();
+        });
+    });
+}
+
+// Rede de seguranca do .mask('99/99/9999') nos campos de data dd/MM/yyyy.
+// Em teclados virtuais (tablet/mobile) o DigitalBush nao dispara keypress e a
+// data crua (ex.: 03072026) chegava ao <f:convertDateTime> -> "informe uma
+// data/hora valida". No blur/change reconstroi dd/MM/yyyy a partir dos 8 digitos.
+function normalizeDateBR() {
+    var digits = (this.value || '').replace(/\D/g, '');
+    if (digits.length === 8) {
+        this.value = digits.substring(0, 2) + '/' + digits.substring(2, 4) + '/' + digits.substring(4, 8);
+    }
+}
+
+function textCounter(field, countfield, maxlimit, numRows) {
+    if (field && field.value && field.value.length > maxlimit) {
+        field.value = field.value.substring(0, maxlimit);
+    } else if (field && field.value && countfield) {
+        countfield.innerHTML = maxlimit - field.value.length;
+    }
+}
+
+function somente_numero_virgula(campo) {
+    var digits = ",0123456789";
+    var campo_temp;
+
+    for (var i = 0; i < campo.value.length; i++) {
+        campo_temp = campo.value.substring(i, i + 1);
+
+        if (digits.indexOf(campo_temp) == -1) {
+            campo.value = campo.value.substring(0, i);
+        }
+    }
+}
+
+function isPositiveInteger(v) {
+    var i;
+    return v && (i = parseInt(v)) && i > 0 && (i === v || '' + i === v);
+}

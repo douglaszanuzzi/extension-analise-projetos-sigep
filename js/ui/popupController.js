@@ -1,6 +1,7 @@
 import { Logger } from "../core/logger.js";
 
 let ultimasAnalises = [];
+let abaAtiva = "analises";
 
 function obterAnalistaSelecionado() {
 
@@ -13,42 +14,37 @@ function obterAnalistaSelecionado() {
 
 function mostrarMensagem(mensagem) {
 
-    const elementoMensagem =
-        document.getElementById("mensagem");
-
     const tbody =
         document.querySelector(
             "#tblAnalises tbody"
         );
 
-    elementoMensagem.textContent = mensagem;
-    elementoMensagem.classList.add("visivel");
-
-    tbody.innerHTML = "";
-
-}
-
-function esconderMensagem() {
-
-    const elementoMensagem =
+    // Mostrar mensagem em um elemento dedicado
+    const elementoMensagem = 
         document.getElementById("mensagem");
+    
+    if (elementoMensagem) {
+        elementoMensagem.textContent = mensagem;
+        elementoMensagem.classList.add("visivel");
+    }
 
-    elementoMensagem.textContent = "";
-    elementoMensagem.classList.remove("visivel");
+    if (tbody) {
+        tbody.innerHTML = "";
+    }
 
 }
 
 function traduzirErro(mensagem) {
 
-    if (mensagem.includes("Receiving end does not exist")) {
+    if (mensagem.includes("Receiving end does not exist")) {s
 
-        return "Abra a tela de analises do BSIT, recarregue a pagina e tente novamente.";
+        return "Abra a tela de analises de Obras do SIGEP, recarregue a pagina e tente novamente.";
 
     }
 
     if (mensagem.includes("Tabela principal")) {
 
-        return "Tabela de analises nao encontrada. Abra a tela da fila de analises do BSIT.";
+        return "Tabela de analises nao encontrada. Abra a tela da fila de analises de Obras do SIGEP.";
 
     }
 
@@ -73,18 +69,6 @@ function renderizarAnalises(analises) {
             item => item.responsavel === analistaSelecionado
         )
         : analises;
-
-    if (!filtradas.length) {
-
-        mostrarMensagem(
-            "Nenhuma analise encontrada para este filtro."
-        );
-
-        return;
-
-    }
-
-    esconderMensagem();
 
     filtradas.forEach(item => {
 
@@ -136,7 +120,7 @@ function renderizarAnalises(analises) {
 
         botaoAbrir.type = "button";
         botaoAbrir.className = "btnAbrirObra";
-        botaoAbrir.textContent = "Acessar";
+        botaoAbrir.textContent = "Abrir";
         botaoAbrir.disabled = !item.urlObra;
 
         botaoAbrir.addEventListener("click", () => {
@@ -161,25 +145,6 @@ function renderizarAnalises(analises) {
 
 }
 
-function atualizarResumo(resumo, analises) {
-
-    const totaisPorResponsavel =
-        contarPorResponsavel(analises);
-
-    document.getElementById("totalPendentes").textContent =
-        resumo.semAnalise;
-
-    document.getElementById("totalGeral").textContent =
-        resumo.total;
-
-    document.getElementById("totalDouglas").textContent =
-        totaisPorResponsavel.Douglas || 0;
-
-    document.getElementById("totalGabriel").textContent =
-        totaisPorResponsavel.Gabriel || 0;
-
-}
-
 function contarPorResponsavel(analises) {
 
     return analises.reduce((totais, item) => {
@@ -192,6 +157,134 @@ function contarPorResponsavel(analises) {
         return totais;
 
     }, {});
+
+}
+
+function alternarAba(novaAba) {
+
+    abaAtiva = novaAba;
+
+    const abaAnalises = document.getElementById("abaAnalises");
+    const abaNotificacoes = document.getElementById("abaNotificacoes");
+    const viewAnalises = document.getElementById("viewAnalises");
+    const viewNotificacoes = document.getElementById("viewNotificacoes");
+
+    if (abaAnalises) {
+        abaAnalises.classList.toggle("ativa", novaAba === "analises");
+    }
+
+    if (abaNotificacoes) {
+        abaNotificacoes.classList.toggle("ativa", novaAba === "notificacoes");
+    }
+
+    if (viewAnalises) {
+        viewAnalises.classList.toggle("visivel", novaAba === "analises");
+        viewAnalises.classList.toggle("oculto", novaAba !== "analises");
+    }
+
+    if (viewNotificacoes) {
+        viewNotificacoes.classList.toggle("visivel", novaAba === "notificacoes");
+        viewNotificacoes.classList.toggle("oculto", novaAba !== "notificacoes");
+    }
+
+}
+
+function renderizarNotificacoes(notificacoes = []) {
+
+    const tbody = document.querySelector("#tblNotificacoes tbody");
+
+    if (!tbody) {
+        return;
+    }
+
+    tbody.innerHTML = "";
+
+    if (!notificacoes.length) {
+
+        const tr = document.createElement("tr");
+        const td = document.createElement("td");
+
+        td.colSpan = 4;
+        td.textContent = "Nenhuma notificação encontrada na popup aberta.";
+
+        tr.appendChild(td);
+        tbody.appendChild(tr);
+
+        return;
+
+    }
+
+    notificacoes.forEach(item => {
+
+        const tr = document.createElement("tr");
+
+        const tdCci = document.createElement("td");
+        tdCci.textContent = item.cci || "";
+
+        const tdProprietario = document.createElement("td");
+        tdProprietario.textContent = item.proprietario || "";
+
+        const tdArquivo = document.createElement("td");
+        tdArquivo.textContent = item.arquivo || "";
+
+        const tdData = document.createElement("td");
+        tdData.textContent = item.data || "";
+
+        tr.appendChild(tdCci);
+        tr.appendChild(tdProprietario);
+        tr.appendChild(tdArquivo);
+        tr.appendChild(tdData);
+
+        tbody.appendChild(tr);
+
+    });
+
+}
+
+async function carregarNotificacoes() {
+
+    const [tab] = await chrome.tabs.query({
+        active: true,
+        currentWindow: true
+    });
+
+    if (!tab) {
+        Logger.error("Nenhuma aba ativa para notificações.");
+        mostrarMensagem("Nenhuma aba ativa encontrada.");
+        return;
+    }
+
+    chrome.tabs.sendMessage(
+
+        tab.id,
+
+        {
+            action: "obterNotificacoes"
+        },
+
+        resposta => {
+
+            if (chrome.runtime.lastError) {
+                Logger.error(chrome.runtime.lastError.message);
+                mostrarMensagem(traduzirErro(chrome.runtime.lastError.message));
+                return;
+            }
+
+            if (!resposta) {
+                mostrarMensagem("Não foi possível obter notificações da página do BSIT.");
+                return;
+            }
+
+            if (resposta.erro) {
+                mostrarMensagem(traduzirErro(resposta.erro));
+                return;
+            }
+
+            renderizarNotificacoes(resposta.notificacoes || []);
+
+        }
+
+    );
 
 }
 
@@ -280,10 +373,18 @@ async function enviarAcao(acao) {
 
             //-----------------------------------------
 
-            atualizarResumo(
-                resposta.resumo,
-                resposta.analises
-            );
+            const totaisPorResponsavel =
+                contarPorResponsavel(resposta.analises);
+
+            // Atualizar valores nos elementos existentes
+            document.getElementById("totalPendentes").textContent = 
+                resposta.resumo.semAnalise;
+            
+            document.getElementById("totalDouglas").textContent = 
+                totaisPorResponsavel.Douglas || 0;
+            
+            document.getElementById("totalGabriel").textContent = 
+                totaisPorResponsavel.Gabriel || 0;
 
             //-----------------------------------------
 
@@ -301,6 +402,8 @@ export async function iniciarPopup() {
 
     Logger.info("Popup iniciado.");
 
+    alternarAba("analises");
+
     document
 
         .getElementById("btnTabela")
@@ -310,6 +413,7 @@ export async function iniciarPopup() {
             () => enviarAcao("analisarTabela")
 
     );
+
     document
 
         .getElementById("filtroAnalista")
@@ -317,6 +421,31 @@ export async function iniciarPopup() {
 
             "change",
             () => renderizarAnalises(ultimasAnalises)
+
+    );
+
+    document
+
+        .getElementById("abaAnalises")
+        .addEventListener(
+
+            "click",
+            () => alternarAba("analises")
+
+    );
+
+    document
+
+        .getElementById("abaNotificacoes")
+        .addEventListener(
+
+            "click",
+            async () => {
+
+                alternarAba("notificacoes");
+                await carregarNotificacoes();
+
+            }
 
     );
 

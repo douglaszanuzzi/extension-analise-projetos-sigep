@@ -34,6 +34,17 @@ chrome.runtime.onMessage.addListener(
 
                     break;
 
+                case "obterNotificacoes":
+
+                    await NotificationService.aguardarPopup();
+
+                    const respostaNotificacoes =
+                        NotificationService.extrairNotificacoes();
+
+                    sendResponse(respostaNotificacoes);
+
+                    break;
+
                 case "testarAcoes":
 
                     sendResponse(
