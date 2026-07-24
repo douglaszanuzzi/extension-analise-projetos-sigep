@@ -5,9 +5,11 @@
   "description": "Ferramenta para inspeção e automação do BSIT.",
   "permissions": [
     "activeTab",
+    "alarms",
     "sidePanel",
     "scripting",
-    "storage"
+    "storage",
+    "tabs"
   ],
   "host_permissions": [
     "http://jatai.bsit-br.com.br/*"
@@ -16,7 +18,8 @@
     "default_title": "Habitese Robot"
   },
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "background.js",
+    "type": "module"
   },
   "side_panel": {
     "default_path": "popup/popup.html"

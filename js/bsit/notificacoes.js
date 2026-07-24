@@ -265,6 +265,17 @@ const NotificationService = {
 
     },
 
+    async sync() {
+
+        const resultado = await this.obterNotificacoes();
+
+        return {
+            ...resultado,
+            sincronizadoEm: new Date().toISOString()
+        };
+
+    },
+
     async obterNotificacoes() {
 
         let popupJaAberta = false;

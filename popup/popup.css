@@ -264,6 +264,15 @@ select{
 
 }
 
+.indicadorSincronizacao,
+.ultimaAtualizacao{
+
+    margin-bottom:8px;
+    font-size:12px;
+    color:#4f5b6d;
+
+}
+
 .listaGruposNotificacoes{
 
     display:flex;
@@ -278,6 +287,47 @@ select{
     border-radius:8px;
     background:#ffffff;
     padding:10px;
+    border-left-width:5px;
+    border-left-style:solid;
+
+}
+
+.grupoNotificacao.status-new{
+
+    border-left-color:#70c993;
+    background:#f3fbf6;
+
+}
+
+.grupoNotificacao.grupoNaoVisto{
+
+    border-color:#69a7f2;
+    border-left-color:#1d4f8f;
+    background:#eef6ff;
+    box-shadow:0 0 0 2px rgba(29, 79, 143, 0.10);
+    animation:destaqueNovoGrupo 900ms ease-out;
+
+}
+
+.grupoNotificacao.status-pending{
+
+    border-left-color:#e0b63a;
+    background:#fff9e8;
+
+}
+
+.grupoNotificacao.status-done{
+
+    border-left-color:#a4b0be;
+    background:#f7f8fb;
+
+}
+
+.grupoNotificacao.status-archived{
+
+    border-left-color:#c9d1da;
+    background:#f8f9fb;
+    opacity:0.82;
 
 }
 
@@ -323,28 +373,35 @@ select{
 
 }
 
-.grupoStatusBadge.novo{
+.grupoStatusBadge.new{
 
     background:#dff6e8;
     color:#186a37;
 
 }
 
-.grupoStatusBadge.aguardando{
+.grupoStatusBadge.novo{
+
+    background:#1d4f8f;
+    color:#ffffff;
+
+}
+
+.grupoStatusBadge.pending{
 
     background:#fff4d6;
     color:#8a5a00;
 
 }
 
-.grupoStatusBadge.concluido{
+.grupoStatusBadge.done{
 
     background:#dbeafe;
     color:#1d4ed8;
 
 }
 
-.grupoStatusBadge.arquivado{
+.grupoStatusBadge.archived{
 
     background:#f3f4f6;
     color:#6b7280;
@@ -465,4 +522,20 @@ tbody tr:hover{
 
     color:#ffffff;
     background:#1d4f8f;
+}
+
+@keyframes destaqueNovoGrupo{
+
+    from{
+
+        box-shadow:0 0 0 4px rgba(29, 79, 143, 0.22);
+
+    }
+
+    to{
+
+        box-shadow:0 0 0 2px rgba(29, 79, 143, 0.10);
+
+    }
+
 }

@@ -1,4 +1,5 @@
 import { NotificationGroup } from "../models/notificationGroup.js";
+import { StorageService } from "../storage/notificationStorageService.js";
 
 export const NOTIFICATION_GROUP_STATUS = Object.freeze({
     NEW: "NEW",
@@ -7,9 +8,9 @@ export const NOTIFICATION_GROUP_STATUS = Object.freeze({
     ARCHIVED: "ARCHIVED"
 });
 
-export const NOTIFICATION_GROUP_WINDOW_MINUTES = 10;
+export const NOTIFICATION_GROUP_WINDOW_MINUTES = 15;
 
-const STORAGE_PREFIX = "notificationGroupStatus_";
+export const NOTIFICATION_SYNC_INTERVAL_MINUTES = 30;
 
 function stringParaData(valor = "") {
 
@@ -25,22 +26,6 @@ function stringParaData(valor = "") {
 
     const [, dia, mes, ano, hora, minuto] = match;
     return new Date(Number(ano), Number(mes) - 1, Number(dia), Number(hora), Number(minuto));
-
-}
-
-function dataParaTexto(data) {
-
-    if (!data) {
-        return "";
-    }
-
-    const dia = String(data.getDate()).padStart(2, "0");
-    const mes = String(data.getMonth() + 1).padStart(2, "0");
-    const ano = data.getFullYear();
-    const hora = String(data.getHours()).padStart(2, "0");
-    const minuto = String(data.getMinutes()).padStart(2, "0");
-
-    return `${dia}/${mes}/${ano} ${hora}:${minuto}`;
 
 }
 
@@ -103,36 +88,89 @@ function ordenarNotificacoes(notificacoes = []) {
 
 }
 
-export const NotificationGroupingService = {
+function dataOrdenacaoGrupo(grupo = {}) {
 
-    async carregarStatusPersistidos() {
+    const valor =
+        grupo.ultimaAtualizacaoEm
+        || grupo.dataFim
+        || grupo.dataInicio
+        || "";
 
-        const dados = await chrome.storage.local.get(null);
-        const mapa = {};
+    const dataIso = new Date(valor);
 
-        Object.entries(dados).forEach(([chave, valor]) => {
+    if (!Number.isNaN(dataIso.getTime())) {
+        return dataIso.getTime();
+    }
 
-            if (chave.startsWith(STORAGE_PREFIX)) {
-                mapa[chave.replace(STORAGE_PREFIX, "")] = valor;
-            }
+    const dataTexto = stringParaData(valor);
 
-        });
+    if (dataTexto) {
+        return dataTexto.getTime();
+    }
 
-        return mapa;
+    return 0;
 
-    },
+}
 
-    async salvarStatus(id, status) {
+function ordenarGruposCaixa(grupos = []) {
 
-        if (!id) {
-            return;
+    return [...grupos].sort((a, b) => {
+
+        const aNovo = !a.visto;
+        const bNovo = !b.visto;
+
+        if (aNovo !== bNovo) {
+            return aNovo ? -1 : 1;
         }
 
-        await chrome.storage.local.set({
-            [`${STORAGE_PREFIX}${id}`]: status
-        });
+        const dataB = dataOrdenacaoGrupo(b);
+        const dataA = dataOrdenacaoGrupo(a);
 
-    },
+        if (dataA !== dataB) {
+            return dataB - dataA;
+        }
+
+        return String(a.id || "").localeCompare(String(b.id || ""));
+
+    });
+
+}
+
+function obterTempoAtual() {
+
+    return new Date().toISOString();
+
+}
+
+function formatarUltimaAtualizacao(valor = "") {
+
+    if (!valor) {
+        return "Ainda não sincronizado";
+    }
+
+    const data = new Date(valor);
+
+    if (Number.isNaN(data.getTime())) {
+        return "Ainda não sincronizado";
+    }
+
+    const agora = new Date();
+    const diferencaMs = agora.getTime() - data.getTime();
+    const diferencaMinutos = Math.max(0, Math.round(diferencaMs / 60000));
+
+    if (diferencaMinutos < 1) {
+        return "Atualizado agora";
+    }
+
+    if (diferencaMinutos === 1) {
+        return "Atualizado há 1 minuto";
+    }
+
+    return `Atualizado há ${diferencaMinutos} minutos`;
+
+}
+
+export const NotificationGroupingService = {
 
     agruparNotificacoes(notificacoes = []) {
 
@@ -187,7 +225,11 @@ export const NotificationGroupingService = {
             proprietario: primeira.proprietario || "",
             dataInicio: primeira.data || "",
             dataFim: ultima.data || "",
+            primeiraNotificacaoEm: primeira.data || "",
+            ultimaAtualizacaoEm: obterTempoAtual(),
             notificacoes: ordenadas,
+            arquivos: extrairArquivos(ordenadas),
+            ehNovo: true,
             status: NOTIFICATION_GROUP_STATUS.NEW
         });
 
@@ -195,23 +237,109 @@ export const NotificationGroupingService = {
 
     },
 
-    async sincronizarGrupos(notificacoes = []) {
+    mesclarGrupos(gruposPersistidos = [], gruposBsit = []) {
 
-        const gruposTemporarios = this.agruparNotificacoes(notificacoes);
-        const statusPersistidos = await this.carregarStatusPersistidos();
+        const gruposPorId = new Map(
+            gruposPersistidos.map(grupo => [grupo.id, grupo])
+        );
 
-        return gruposTemporarios.map(grupo => ({
-            ...grupo,
-            status: statusPersistidos[grupo.id] || grupo.status
-        }));
+        let totalNovos = 0;
+        let totalAtualizados = 0;
+
+        gruposBsit.forEach(grupoBsit => {
+
+            const persistido = gruposPorId.get(grupoBsit.id);
+
+            if (!persistido) {
+
+                totalNovos++;
+
+                gruposPorId.set(grupoBsit.id, {
+                    ...grupoBsit,
+                    status: NOTIFICATION_GROUP_STATUS.NEW,
+                    visto: false,
+                    vistoEm: "",
+                    ehNovo: true,
+                    primeiraNotificacaoEm: grupoBsit.dataInicio,
+                    ultimaAtualizacaoEm: obterTempoAtual(),
+                    arquivos: extrairArquivos(grupoBsit.notificacoes || [])
+                });
+
+                return;
+
+            }
+
+            const notificacoesAtuais = persistido.notificacoes || [];
+            const notificacoesNovas = grupoBsit.notificacoes || [];
+            const houveMudanca =
+                notificacoesNovas.length !== notificacoesAtuais.length
+                || grupoBsit.dataFim !== persistido.dataFim
+                || grupoBsit.proprietario !== persistido.proprietario
+                || grupoBsit.cci !== persistido.cci;
+
+            if (!houveMudanca) {
+                return;
+            }
+
+            totalAtualizados++;
+
+            gruposPorId.set(grupoBsit.id, {
+                ...persistido,
+                cci: grupoBsit.cci,
+                proprietario: grupoBsit.proprietario,
+                dataInicio: persistido.dataInicio || grupoBsit.dataInicio,
+                dataFim: grupoBsit.dataFim,
+                notificacoes: notificacoesNovas,
+                ultimaAtualizacaoEm: obterTempoAtual(),
+                arquivos: extrairArquivos(notificacoesNovas),
+                // Status do usuario sempre prevalece sobre dados vindos do BSIT.
+                status: persistido.status,
+                visto: persistido.visto,
+                vistoEm: persistido.vistoEm || "",
+                ehNovo: !persistido.visto
+            });
+
+        });
+
+        return {
+            grupos: ordenarGruposCaixa(
+                Array.from(gruposPorId.values())
+            ),
+            totalNovos,
+            totalAtualizados
+        };
+
+    },
+
+    ordenarGrupos(grupos = []) {
+
+        return ordenarGruposCaixa(grupos);
+
+    },
+
+    async sincronizarGrupos(notificacoes = [], gruposPersistidos = []) {
+
+        const gruposBsit = this.agruparNotificacoes(notificacoes);
+        const sincronizacao = this.mesclarGrupos(
+            gruposPersistidos,
+            gruposBsit
+        );
+
+        const ultimaAtualizacaoIso = obterTempoAtual();
+
+        return {
+            ...sincronizacao,
+            ultimaAtualizacao: formatarUltimaAtualizacao(ultimaAtualizacaoIso),
+            ultimaAtualizacaoIso
+        };
 
     },
 
     async atualizarStatus(id, status) {
 
-        await this.salvarStatus(id, status);
+        const inbox = await StorageService.atualizarStatusGrupo(id, status);
 
-        return status;
+        return inbox;
 
     },
 
