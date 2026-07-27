@@ -40,6 +40,8 @@ const BSITInspector = {
             "tbody tr.rich-table-row"
         );
 
+        const totalLinhasDomNoMomento = linhas.length;
+
         // Todos os menus "Acessar Obra"
         const menus = document.querySelectorAll(
             '[onclick*="buildingConstruction-id"]'
@@ -119,6 +121,33 @@ const BSITInspector = {
         }
 
     });
+
+        console.info("[DEBUG DISTRIBUICAO] Hipotese 1 - leitura inicial da tabela", {
+            quantidadeLinhasDom: totalLinhasDomNoMomento,
+            quantidadeProcessosLidos: total,
+            quantidadeSemAnalise: semAnalise,
+            quantidadeEnviadaAoDistribution: analises.length,
+            idsEnviadosAoDistribution: analises.map(item => item.buildingConstructionId)
+        });
+
+        window.setTimeout(() => {
+
+            const tabelaAtualizada = document.getElementById(
+                "formBuildingAnalisys:buildings"
+            );
+
+            const linhasDepois = tabelaAtualizada
+                ? tabelaAtualizada.querySelectorAll("tbody tr.rich-table-row")
+                : [];
+
+            console.info("[DEBUG DISTRIBUICAO] Hipotese 1 - tabela apos 3 segundos", {
+                quantidadeLinhasDomInicial: totalLinhasDomNoMomento,
+                quantidadeLinhasDomDepois: linhasDepois.length,
+                houveMudancaQuantidadeLinhas:
+                    linhasDepois.length !== totalLinhasDomNoMomento
+            });
+
+        }, 3000);
 
         await Distribution.distribuir(analises);
 
