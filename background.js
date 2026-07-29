@@ -1,26 +1,61 @@
 import { NotificationService } from "./js/bsit/notificationService.js";
+import { Logger } from "./js/core/logger.js";
 
 const NOTIFICATION_SYNC_ALARM = "notificationInboxSync";
 
-console.log("Background iniciado.");
+globalThis.addEventListener("unhandledrejection", event => {
+    Logger.error("Promise rejeitada no background.", event.reason);
+});
+
+globalThis.addEventListener("error", event => {
+    Logger.error("Erro inesperado no background.", event.error);
+});
 
 function configurarSidePanel() {
 
-    if (!chrome.sidePanel) {
-        return;
-    }
+    try {
 
-    chrome.sidePanel.setPanelBehavior({
-        openPanelOnActionClick: true
-    });
+        if (!chrome.sidePanel) {
+            return;
+        }
+
+        const resultado = chrome.sidePanel.setPanelBehavior({
+            openPanelOnActionClick: true
+        });
+
+        if (resultado?.catch) {
+            resultado.catch(erro => {
+                Logger.warn("Falha ao aplicar comportamento do side panel.", erro);
+            });
+        }
+
+    } catch (erro) {
+
+        Logger.warn("Falha ao configurar side panel.", erro);
+
+    }
 
 }
 
 function configurarSincronizacaoAutomatica() {
 
-    chrome.alarms.create(NOTIFICATION_SYNC_ALARM, {
-        periodInMinutes: NotificationService.INTERVALO_MINUTOS
-    });
+    try {
+
+        const resultado = chrome.alarms.create(NOTIFICATION_SYNC_ALARM, {
+            periodInMinutes: NotificationService.INTERVALO_MINUTOS
+        });
+
+        if (resultado?.catch) {
+            resultado.catch(erro => {
+                Logger.warn("Falha ao criar alarme de sincronizacao.", erro);
+            });
+        }
+
+    } catch (erro) {
+
+        Logger.warn("Falha ao configurar alarme de sincronizacao.", erro);
+
+    }
 
 }
 
@@ -46,7 +81,7 @@ chrome.alarms.onAlarm.addListener(async alarm => {
 
     } catch (erro) {
 
-        console.warn("[Habitese] Falha na sincronizacao automatica.", erro);
+        Logger.warn("Falha na sincronizacao automatica.", erro);
 
     }
 

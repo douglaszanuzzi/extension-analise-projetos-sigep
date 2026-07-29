@@ -1,10 +1,77 @@
-console.log("content.js carregado");
+function debugAtivo() {
+
+    return globalThis.HABITESE_DEBUG !== false;
+
+}
+
+function registrarErro(contexto, erro) {
+
+    if (!debugAtivo()) {
+        return;
+    }
+
+    console.error("[Habitese]", contexto, erro);
+
+}
+
+function registrarAviso(contexto, erro) {
+
+    if (!debugAtivo()) {
+        return;
+    }
+
+    console.warn("[Habitese]", contexto, erro);
+
+}
+
+globalThis.addEventListener("unhandledrejection", event => {
+    registrarErro("Promise rejeitada no content script.", event.reason);
+});
+
+globalThis.addEventListener("error", event => {
+    registrarErro("Erro inesperado no content script.", event.error);
+});
+
+function erroAmigavel(erro) {
+
+    const mensagem = erro?.message || String(erro || "");
+
+    if (!mensagem) {
+        return "Nao foi possivel executar a acao na pagina do BSIT.";
+    }
+
+    return mensagem;
+
+}
+
+function responderComSeguranca(sendResponse, resposta) {
+
+    if (typeof sendResponse !== "function") {
+        registrarAviso("Callback de resposta indisponivel.", resposta);
+        return;
+    }
+
+    try {
+        sendResponse(resposta);
+    } catch (erro) {
+        registrarAviso("Falha ao responder mensagem.", erro);
+    }
+
+}
 
 chrome.runtime.onMessage.addListener(
 
     (request, sender, sendResponse) => {
 
-        console.log("Mensagem recebida:", request);
+        if (!request || typeof request.action !== "string") {
+
+            responderComSeguranca(sendResponse, {
+                erro: "Mensagem invalida."
+            });
+
+            return false;
+
+        }
 
         (async () => {
 
@@ -12,7 +79,7 @@ chrome.runtime.onMessage.addListener(
 
                 case "inspecionar":
 
-                    sendResponse(
+                    responderComSeguranca(sendResponse,
                         BSITInspector.inspecionarPagina()
                     );
 
@@ -20,7 +87,7 @@ chrome.runtime.onMessage.addListener(
 
                 case "analisarTabela":
 
-                    sendResponse(
+                    responderComSeguranca(sendResponse,
                         await BSITInspector.analisarTabelaPrincipal()
                     );
 
@@ -28,7 +95,7 @@ chrome.runtime.onMessage.addListener(
 
                 case "analisarLinha":
 
-                    sendResponse(
+                    responderComSeguranca(sendResponse,
                         BSITInspector.analisarPrimeiraLinha()
                     );
 
@@ -39,13 +106,13 @@ chrome.runtime.onMessage.addListener(
                     const respostaNotificacoes =
                         await NotificationService.obterNotificacoes();
 
-                    sendResponse(respostaNotificacoes);
+                    responderComSeguranca(sendResponse, respostaNotificacoes);
 
                     break;
 
                 case "testarAcoes":
 
-                    sendResponse(
+                    responderComSeguranca(sendResponse,
                         BSITInspector.testarAcoes()
                     );
 
@@ -53,7 +120,7 @@ chrome.runtime.onMessage.addListener(
 
                 default:
 
-                    sendResponse({
+                    responderComSeguranca(sendResponse, {
                         erro: "Acao desconhecida."
                     });
 
@@ -61,10 +128,10 @@ chrome.runtime.onMessage.addListener(
 
         })().catch(erro => {
 
-            console.error("Erro ao processar mensagem:", erro);
+            registrarErro("Erro ao processar mensagem.", erro);
 
-            sendResponse({
-                erro: erro.message
+            responderComSeguranca(sendResponse, {
+                erro: erroAmigavel(erro)
             });
 
         });

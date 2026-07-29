@@ -1,3 +1,25 @@
+function notificacoesDebugAtivo() {
+
+    return globalThis.HABITESE_DEBUG !== false;
+
+}
+
+function notificacoesWarn(...args) {
+
+    if (notificacoesDebugAtivo()) {
+        console.warn(...args);
+    }
+
+}
+
+function notificacoesError(...args) {
+
+    if (notificacoesDebugAtivo()) {
+        console.error(...args);
+    }
+
+}
+
 const NotificationInspector = {
 
     localizarContainer() {
@@ -155,7 +177,7 @@ const NotificationService = {
             );
 
         if (!botao) {
-            console.error("[Habitese] Botão de notificações não encontrado.");
+            notificacoesError("[Habitese] Botão de notificações não encontrado.");
         }
 
         return botao;
@@ -164,23 +186,32 @@ const NotificationService = {
 
     popupEstaVisivel() {
 
-        const popup = document.getElementById("notificationModal");
-        const popupContainer = document.getElementById("notificationModalContainer");
+        try {
 
-        if (!popup && !popupContainer) {
+            const popup = document.getElementById("notificationModal");
+            const popupContainer = document.getElementById("notificationModalContainer");
+
+            if (!popup && !popupContainer) {
+                return false;
+            }
+
+            const displayPopup = popup
+                ? window.getComputedStyle(popup).display
+                : "none";
+
+            const displayContainer = popupContainer
+                ? window.getComputedStyle(popupContainer).display
+                : "none";
+
+            return displayPopup !== "none"
+                || displayContainer !== "none";
+
+        } catch (erro) {
+
+            notificacoesWarn("[Habitese] Falha ao verificar popup de notificacoes.", erro);
             return false;
+
         }
-
-        const displayPopup = popup
-            ? window.getComputedStyle(popup).display
-            : "none";
-
-        const displayContainer = popupContainer
-            ? window.getComputedStyle(popupContainer).display
-            : "none";
-
-        return displayPopup !== "none"
-            || displayContainer !== "none";
 
     },
 
@@ -202,10 +233,20 @@ const NotificationService = {
             };
         }
 
-        if (typeof window.Richfaces?.showModalPanel === "function") {
-            window.Richfaces.showModalPanel("notificationModal");
-        } else {
-            botao.click();
+        try {
+
+            if (typeof window.Richfaces?.showModalPanel === "function") {
+                window.Richfaces.showModalPanel("notificationModal");
+            } else {
+                botao.click();
+            }
+
+        } catch (erro) {
+
+            return {
+                erro: "Nao foi possivel abrir o popup de notificacoes."
+            };
+
         }
 
         return this.aguardarPopup();
@@ -232,7 +273,7 @@ const NotificationService = {
                 if (observer) {
                     observer.disconnect();
                 }
-                console.error("[Habitese] Timeout aguardando popup de notificações.");
+                notificacoesError("[Habitese] Timeout aguardando popup de notificações.");
                 reject(new Error("Timeout aguardando popup de notificações."));
             }, this.MAX_WAIT_MS);
 
@@ -248,12 +289,30 @@ const NotificationService = {
 
             });
 
-            observer.observe(document.body, {
-                childList: true,
-                subtree: true,
-                attributes: true,
-                attributeFilter: ["style", "class"]
-            });
+            try {
+
+                if (!document.body) {
+                    window.clearTimeout(timeoutId);
+                    reject(new Error("Pagina ainda nao carregada."));
+                    return;
+                }
+
+                observer.observe(document.body, {
+                    childList: true,
+                    subtree: true,
+                    attributes: true,
+                    attributeFilter: ["style", "class"]
+                });
+
+            } catch (erro) {
+
+                window.clearTimeout(timeoutId);
+                if (observer) {
+                    observer.disconnect();
+                }
+                reject(erro);
+
+            }
 
         });
 
@@ -299,21 +358,21 @@ const NotificationService = {
             const resultado = this.extrairNotificacoes();
 
             if (!resultado || resultado.erro) {
-                console.error("[Habitese] Erro ao ler popup de notificações.", resultado?.erro || "Erro desconhecido.");
+                notificacoesError("[Habitese] Erro ao ler popup de notificações.", resultado?.erro || "Erro desconhecido.");
                 return resultado || {
                     erro: "Erro ao ler popup de notificações."
                 };
             }
 
             if (!resultado.notificacoes || !resultado.notificacoes.length) {
-                console.warn("[Habitese] Popup de notificações aberta, mas sem dados.");
+                notificacoesWarn("[Habitese] Popup de notificações aberta, mas sem dados.");
             }
 
             return resultado;
 
         } catch (erro) {
 
-            console.error("[Habitese] Falha ao automatizar notificações.", erro);
+            notificacoesError("[Habitese] Falha ao automatizar notificações.", erro);
 
             return {
                 erro: erro.message
@@ -329,16 +388,24 @@ const NotificationService = {
 
     fecharPopup() {
 
-        if (typeof window.Richfaces?.hideModalPanel === "function") {
-            window.Richfaces.hideModalPanel("notificationModal");
-            return Promise.resolve(true);
-        }
+        try {
 
-        const botaoFechar = document.getElementById("notificationModalHidelink");
+            if (typeof window.Richfaces?.hideModalPanel === "function") {
+                window.Richfaces.hideModalPanel("notificationModal");
+                return Promise.resolve(true);
+            }
 
-        if (botaoFechar && typeof botaoFechar.click === "function") {
-            botaoFechar.click();
-            return Promise.resolve(true);
+            const botaoFechar = document.getElementById("notificationModalHidelink");
+
+            if (botaoFechar && typeof botaoFechar.click === "function") {
+                botaoFechar.click();
+                return Promise.resolve(true);
+            }
+
+        } catch (erro) {
+
+            notificacoesWarn("[Habitese] Falha ao fechar popup de notificacoes.", erro);
+
         }
 
         return Promise.resolve(true);

@@ -1,3 +1,5 @@
+import { Logger } from "../core/logger.js";
+
 const STORAGE_KEY = "notificationInbox";
 
 function criarInboxPadrao() {
@@ -53,16 +55,31 @@ export const StorageService = {
 
     async carregarInbox() {
 
-        const dados = await chrome.storage.local.get(STORAGE_KEY);
-        const inbox = dados[STORAGE_KEY] || criarInboxPadrao();
+        try {
 
-        return {
-            ...criarInboxPadrao(),
-            ...inbox,
-            grupos: Array.isArray(inbox.grupos)
-                ? inbox.grupos.map(normalizarGrupo)
-                : []
-        };
+            const dados = await chrome.storage.local.get(STORAGE_KEY);
+            const inbox = dados[STORAGE_KEY] || criarInboxPadrao();
+
+            if (!inbox || typeof inbox !== "object") {
+                return criarInboxPadrao();
+            }
+
+            return {
+                ...criarInboxPadrao(),
+                ...inbox,
+                grupos: Array.isArray(inbox.grupos)
+                    ? inbox.grupos.map(normalizarGrupo)
+                    : []
+            };
+
+        } catch (erro) {
+
+            Logger.warn("Falha ao carregar inbox local. Usando caixa vazia.", erro);
+
+            return criarInboxPadrao();
+
+        }
+
 
     },
 
@@ -76,9 +93,17 @@ export const StorageService = {
                 : []
         };
 
-        await chrome.storage.local.set({
-            [STORAGE_KEY]: dados
-        });
+        try {
+
+            await chrome.storage.local.set({
+                [STORAGE_KEY]: dados
+            });
+
+        } catch (erro) {
+
+            Logger.warn("Falha ao salvar inbox local.", erro);
+
+        }
 
         return dados;
 

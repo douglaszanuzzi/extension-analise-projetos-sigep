@@ -1,4 +1,5 @@
 import { Logger } from "../core/logger.js";
+import { safeSendMessage } from "../core/chromeMessaging.js";
 import { NotificationService } from "../bsit/notificationService.js";
 import {
     NotificationGroupingService,
@@ -44,19 +45,45 @@ function mostrarMensagem(mensagem) {
 
 function traduzirErro(mensagem = "") {
 
-    if (mensagem.includes("Receiving end does not exist")) {
+    const texto = String(mensagem || "");
 
-        return "Abra a tela de analises de Obras do SIGEP, recarregue a pagina e tente novamente.";
+    if (
+        texto.includes("Receiving end does not exist")
+        || texto.includes("Could not establish connection")
+    ) {
+
+        return "Nao foi possivel comunicar com a pagina do BSIT. Verifique se ela esta aberta e tente novamente.";
 
     }
 
-    if (mensagem.includes("Tabela principal")) {
+    if (texto.includes("Tempo limite aguardando resposta")) {
+
+        return "A pagina do BSIT demorou para responder. Recarregue a pagina e tente novamente.";
+
+    }
+
+    if (texto.includes("nao pertence ao BSIT")) {
+
+        return "Abra uma pagina do BSIT para executar esta acao.";
+
+    }
+
+    if (
+        texto.includes("No tab with id")
+        || texto.includes("Tabs cannot be edited")
+    ) {
+
+        return "A aba do BSIT nao esta mais disponivel. Abra a pagina novamente e tente outra vez.";
+
+    }
+
+    if (texto.includes("Tabela principal")) {
 
         return "Tabela de analises nao encontrada. Abra a tela da fila de analises de Obras do SIGEP.";
 
     }
 
-    return mensagem;
+    return texto || "Nao foi possivel concluir a acao. Tente novamente.";
 
 }
 
@@ -66,6 +93,11 @@ function renderizarAnalises(analises) {
         document.querySelector(
             "#tblAnalises tbody"
         );
+
+    if (!tbody) {
+        mostrarMensagem("Tabela da extensao nao encontrada.");
+        return;
+    }
 
     tbody.innerHTML = "";
 
@@ -135,9 +167,25 @@ function renderizarAnalises(analises) {
                 return;
             }
 
-            chrome.tabs.create({
-                url: item.urlObra
-            });
+            try {
+
+                const resultado = chrome.tabs.create({
+                    url: item.urlObra
+                });
+
+                if (resultado?.catch) {
+                    resultado.catch(erro => {
+                        Logger.error("Falha ao abrir obra.", erro);
+                        mostrarMensagem("Nao foi possivel abrir a analise.");
+                    });
+                }
+
+            } catch (erro) {
+
+                Logger.error("Falha ao abrir obra.", erro);
+                mostrarMensagem("Nao foi possivel abrir a analise.");
+
+            }
 
         });
 
@@ -257,21 +305,29 @@ function contarGruposNaoVistos(grupos = []) {
 
 async function marcarGrupoComoVisto(grupoId) {
 
-    const grupo =
-        gruposNotificacoes.find(item => item.id === grupoId);
+    try {
 
-    if (!grupo || grupo.visto) {
-        return;
+        const grupo =
+            gruposNotificacoes.find(item => item.id === grupoId);
+
+        if (!grupo || grupo.visto) {
+            return;
+        }
+
+        const inbox = await NotificationService.marcarComoVisto(grupoId);
+
+        gruposNotificacoes = inbox.grupos || [];
+        totalNovos = contarGruposNaoVistos(gruposNotificacoes);
+        ultimaAtualizacaoTexto =
+            inbox.ultimaAtualizacaoTexto || ultimaAtualizacaoTexto;
+
+        renderizarNotificacoes(gruposNotificacoes);
+
+    } catch (erro) {
+
+        Logger.error("Falha ao marcar grupo como visto.", erro);
+
     }
-
-    const inbox = await NotificationService.marcarComoVisto(grupoId);
-
-    gruposNotificacoes = inbox.grupos || [];
-    totalNovos = contarGruposNaoVistos(gruposNotificacoes);
-    ultimaAtualizacaoTexto =
-        inbox.ultimaAtualizacaoTexto || ultimaAtualizacaoTexto;
-
-    renderizarNotificacoes(gruposNotificacoes);
 
 }
 
@@ -318,24 +374,33 @@ function observarVisualizacaoGrupo(card, grupo) {
 
 async function atualizarStatusGrupo(grupoId, status) {
 
-    const grupoSelecionado =
-        gruposNotificacoes.find(grupo => grupo.id === grupoId);
+    try {
 
-    if (!grupoSelecionado) {
-        return;
+        const grupoSelecionado =
+            gruposNotificacoes.find(grupo => grupo.id === grupoId);
+
+        if (!grupoSelecionado) {
+            return;
+        }
+
+        const inbox = await NotificationService.atualizarStatus(
+            grupoSelecionado.id,
+            status
+        );
+
+        gruposNotificacoes = inbox.grupos || [];
+        totalNovos = contarGruposNaoVistos(gruposNotificacoes);
+        ultimaAtualizacaoTexto =
+            inbox.ultimaAtualizacaoTexto || ultimaAtualizacaoTexto;
+
+        renderizarNotificacoes(gruposNotificacoes);
+
+    } catch (erro) {
+
+        Logger.error("Falha ao atualizar status do grupo.", erro);
+        mostrarMensagem("Nao foi possivel atualizar a notificacao.");
+
     }
-
-    const inbox = await NotificationService.atualizarStatus(
-        grupoSelecionado.id,
-        status
-    );
-
-    gruposNotificacoes = inbox.grupos || [];
-    totalNovos = contarGruposNaoVistos(gruposNotificacoes);
-    ultimaAtualizacaoTexto =
-        inbox.ultimaAtualizacaoTexto || ultimaAtualizacaoTexto;
-
-    renderizarNotificacoes(gruposNotificacoes);
 
 }
 
@@ -489,46 +554,76 @@ function renderizarNotificacoes(grupos = []) {
 
 async function carregarNotificacoes() {
 
-    const inbox = await NotificationService.carregarInbox();
+    try {
 
-    gruposNotificacoes = inbox.grupos || [];
-    totalNovos = contarGruposNaoVistos(gruposNotificacoes);
-    ultimaAtualizacaoTexto =
-        inbox.ultimaAtualizacaoTexto || "Ultima atualizacao";
+        const inbox = await NotificationService.carregarInbox();
 
-    renderizarNotificacoes(gruposNotificacoes);
+        gruposNotificacoes = inbox.grupos || [];
+        totalNovos = contarGruposNaoVistos(gruposNotificacoes);
+        ultimaAtualizacaoTexto =
+            inbox.ultimaAtualizacaoTexto || "Ultima atualizacao";
 
-    sincronizarNotificacoesEmSegundoPlano();
+        renderizarNotificacoes(gruposNotificacoes);
+
+        sincronizarNotificacoesEmSegundoPlano();
+
+    } catch (erro) {
+
+        Logger.error("Falha ao carregar notificacoes.", erro);
+        mostrarMensagem("Nao foi possivel carregar as notificacoes salvas.");
+
+    }
 
 }
 
 async function sincronizarNotificacoesEmSegundoPlano() {
 
-    const resultado = await NotificationService.sync();
+    try {
 
-    if (resultado.erro) {
-        Logger.warn(resultado.erro);
+        const resultado = await NotificationService.sync();
+
+        if (resultado.erro) {
+            Logger.warn(resultado.erro);
+            atualizarIndicadoresSincronizacao();
+            return;
+        }
+
+        gruposNotificacoes = resultado.grupos || [];
+        totalNovos = contarGruposNaoVistos(gruposNotificacoes);
+        ultimaAtualizacaoTexto =
+            resultado.ultimaAtualizacaoTexto || "Ultima atualizacao";
+
+        renderizarNotificacoes(gruposNotificacoes);
+
+    } catch (erro) {
+
+        Logger.error("Falha na sincronizacao de notificacoes.", erro);
         atualizarIndicadoresSincronizacao();
-        return;
+
     }
-
-    gruposNotificacoes = resultado.grupos || [];
-    totalNovos = contarGruposNaoVistos(gruposNotificacoes);
-    ultimaAtualizacaoTexto =
-        resultado.ultimaAtualizacaoTexto || "Ultima atualizacao";
-
-    renderizarNotificacoes(gruposNotificacoes);
 
 }
 
 async function enviarAcao(acao) {
 
-    console.log("ACAO ENVIADA:", acao);
+    Logger.info("ACAO ENVIADA:", acao);
 
-    const [tab] = await chrome.tabs.query({
-        active: true,
-        currentWindow: true
-    });
+    let tab = null;
+
+    try {
+
+        [tab] = await chrome.tabs.query({
+            active: true,
+            currentWindow: true
+        });
+
+    } catch (erro) {
+
+        Logger.error("Falha ao localizar aba ativa.", erro);
+        mostrarMensagem("Nao foi possivel localizar a aba ativa.");
+        return;
+
+    }
 
     if (!tab) {
 
@@ -542,76 +637,99 @@ async function enviarAcao(acao) {
 
     }
 
-    chrome.tabs.sendMessage(
+    if (typeof tab.id !== "number") {
 
-        tab.id,
+        Logger.warn("Aba ativa sem id valido.", tab);
 
+        mostrarMensagem(
+            "Nao foi possivel comunicar com a aba ativa."
+        );
+
+        return;
+
+    }
+
+    const resposta = await safeSendMessage(
+        tab,
         {
             action: acao
-        },
-
-        resposta => {
-
-            if (chrome.runtime.lastError) {
-
-                Logger.error(chrome.runtime.lastError.message);
-
-                mostrarMensagem(
-                    traduzirErro(chrome.runtime.lastError.message)
-                );
-
-                return;
-
-            }
-
-            if (!resposta) {
-
-                mostrarMensagem(
-                    "Nao foi possivel obter resposta da pagina do BSIT."
-                );
-
-                return;
-
-            }
-
-            if (resposta.erro) {
-
-                mostrarMensagem(
-                    traduzirErro(resposta.erro)
-                );
-
-                return;
-
-            }
-
-            const totaisPorResponsavel =
-                contarPorResponsavel(resposta.analises);
-
-            document.getElementById("totalPendentes").textContent =
-                resposta.resumo.semAnalise;
-
-            document.getElementById("totalDouglas").textContent =
-                totaisPorResponsavel.Douglas || 0;
-
-            document.getElementById("totalGabriel").textContent =
-                totaisPorResponsavel.Gabriel || 0;
-
-            ultimasAnalises = resposta.analises;
-
-            renderizarAnalises(ultimasAnalises);
-
         }
-
     );
+
+    if (!resposta) {
+
+        mostrarMensagem(
+            "Nao foi possivel obter resposta da pagina do BSIT."
+        );
+
+        return;
+
+    }
+
+    if (resposta.erro) {
+
+        mostrarMensagem(
+            traduzirErro(resposta.erro)
+        );
+
+        return;
+
+    }
+
+    const analises = Array.isArray(resposta.analises)
+        ? resposta.analises
+        : [];
+
+    const totaisPorResponsavel =
+        contarPorResponsavel(analises);
+
+    const totalPendentes =
+        document.getElementById("totalPendentes");
+    const totalDouglas =
+        document.getElementById("totalDouglas");
+    const totalGabriel =
+        document.getElementById("totalGabriel");
+
+    if (totalPendentes) {
+        totalPendentes.textContent =
+            resposta.resumo?.semAnalise || 0;
+    }
+
+    if (totalDouglas) {
+        totalDouglas.textContent =
+            totaisPorResponsavel.Douglas || 0;
+    }
+
+    if (totalGabriel) {
+        totalGabriel.textContent =
+            totaisPorResponsavel.Gabriel || 0;
+    }
+
+    ultimasAnalises = analises;
+
+    renderizarAnalises(ultimasAnalises);
 
 }
 
 function iniciarSincronizacaoAutomaticaLocal() {
 
     window.setInterval(
-        sincronizarNotificacoesEmSegundoPlano,
+        () => sincronizarNotificacoesEmSegundoPlano(),
         NotificationService.INTERVALO_MINUTOS * 60 * 1000
     );
+
+}
+
+function adicionarEvento(id, evento, manipulador) {
+
+    const elemento = document.getElementById(id);
+
+    if (!elemento) {
+        Logger.warn(`Elemento nao encontrado: ${id}`);
+        return;
+    }
+
+    elemento.addEventListener(evento, manipulador);
 
 }
 
@@ -622,73 +740,49 @@ export async function iniciarPopup() {
     alternarAba("analises");
     iniciarSincronizacaoAutomaticaLocal();
 
-    document
-
-        .getElementById("btnTabela")
-        .addEventListener(
-
-            "click",
-            () => enviarAcao("analisarTabela")
-
+    adicionarEvento(
+        "btnTabela",
+        "click",
+        () => enviarAcao("analisarTabela")
     );
 
-    document
-
-        .getElementById("filtroAnalista")
-        .addEventListener(
-
-            "change",
-            () => renderizarAnalises(ultimasAnalises)
-
+    adicionarEvento(
+        "filtroAnalista",
+        "change",
+        () => renderizarAnalises(ultimasAnalises)
     );
 
-    document
-
-        .getElementById("abaAnalises")
-        .addEventListener(
-
-            "click",
-            () => alternarAba("analises")
-
+    adicionarEvento(
+        "abaAnalises",
+        "click",
+        () => alternarAba("analises")
     );
 
-    document
+    adicionarEvento(
+        "abaNotificacoes",
+        "click",
+        async () => {
 
-        .getElementById("abaNotificacoes")
-        .addEventListener(
+            alternarAba("notificacoes");
 
-            "click",
-            async () => {
-
-                alternarAba("notificacoes");
-
-                if (!notificacoesCarregadas) {
-                    notificacoesCarregadas = true;
-                    await carregarNotificacoes();
-                }
-
+            if (!notificacoesCarregadas) {
+                notificacoesCarregadas = true;
+                await carregarNotificacoes();
             }
 
+        }
     );
 
-    document
-
-        .getElementById("btnBuscarNotificacoes")
-        .addEventListener(
-
-            "click",
-            sincronizarNotificacoesEmSegundoPlano
-
+    adicionarEvento(
+        "btnBuscarNotificacoes",
+        "click",
+        sincronizarNotificacoesEmSegundoPlano
     );
 
-    document
-
-        .getElementById("filtroStatusNotificacoes")
-        .addEventListener(
-
-            "change",
-            () => renderizarNotificacoes(gruposNotificacoes)
-
+    adicionarEvento(
+        "filtroStatusNotificacoes",
+        "change",
+        () => renderizarNotificacoes(gruposNotificacoes)
     );
 
 }

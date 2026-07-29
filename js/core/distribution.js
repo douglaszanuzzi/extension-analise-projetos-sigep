@@ -1,5 +1,27 @@
 let distribuicaoEmAndamento = null;
 
+function distributionDebugAtivo() {
+
+    return globalThis.HABITESE_DEBUG !== false;
+
+}
+
+function distributionInfo(...args) {
+
+    if (distributionDebugAtivo()) {
+        console.info(...args);
+    }
+
+}
+
+function distributionWarn(...args) {
+
+    if (distributionDebugAtivo()) {
+        console.warn(...args);
+    }
+
+}
+
 const Distribution = {
 
     ANALISTAS: [
@@ -114,13 +136,18 @@ const Distribution = {
 
     async distribuir(processos) {
 
+        if (!Array.isArray(processos)) {
+            distributionWarn("[Distribution] Lista de processos invalida.", processos);
+            processos = [];
+        }
+
         const execId =
             `dist-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
         const inicio = Date.now();
 
         if (distribuicaoEmAndamento) {
 
-            console.info(
+            distributionInfo(
                 "[Distribution] Execucao concorrente detectada; aguardando a execucao atual",
                 {
                     timestamp: Date.now(),
@@ -167,7 +194,7 @@ const Distribution = {
                 )
             );
 
-            console.info("[Distribution] Inicio da distribuicao", {
+            distributionInfo("[Distribution] Inicio da distribuicao", {
                 timestamp: Date.now(),
                 execId,
                 horaInicio: inicio,
@@ -184,7 +211,7 @@ const Distribution = {
                 }))
             });
 
-            console.info("=== FILA RECEBIDA ===", processos.map(processo => {
+            distributionInfo("=== FILA RECEBIDA ===", processos.map(processo => {
 
                 const id = processo.buildingConstructionId;
 
@@ -199,7 +226,7 @@ const Distribution = {
 
             }));
 
-            console.info("=== CARGA CALCULADA ===", {
+            distributionInfo("=== CARGA CALCULADA ===", {
                 ...cargaAtual
             });
 
@@ -207,7 +234,7 @@ const Distribution = {
 
                 const id = processo.buildingConstructionId;
 
-                console.info("=== PROCESSO ANALISADO ===", {
+                distributionInfo("=== PROCESSO ANALISADO ===", {
                     id,
                     indiceFila: indice,
                     novoOuExistente: id && distribuicao[id]
@@ -224,7 +251,7 @@ const Distribution = {
 
                     processo.responsavel = "";
 
-                    console.info("[Distribution] Processo sem id", {
+                    distributionInfo("[Distribution] Processo sem id", {
                         indiceFila: indice,
                         motivo: "Sem buildingConstructionId",
                         analistaEscolhido: "",
@@ -234,7 +261,7 @@ const Distribution = {
                         }
                     });
 
-                    console.info("=== CARGA APOS ATRIBUICAO ===", {
+                    distributionInfo("=== CARGA APOS ATRIBUICAO ===", {
                         id,
                         analistaEscolhido: "",
                         motivo: "Sem buildingConstructionId",
@@ -252,7 +279,7 @@ const Distribution = {
                     processo.responsavel =
                         distribuicao[id];
 
-                    console.info("[Distribution] Processo ja distribuido", {
+                    distributionInfo("[Distribution] Processo ja distribuido", {
                         numeroAnalise: id,
                         indiceFila: indice,
                         motivo: "Ja existente em distribuicao",
@@ -263,7 +290,7 @@ const Distribution = {
                         }
                     });
 
-                    console.info("=== CARGA APOS ATRIBUICAO ===", {
+                    distributionInfo("=== CARGA APOS ATRIBUICAO ===", {
                         id,
                         analistaEscolhido: processo.responsavel,
                         motivo: "Existente - carga nao alterada",
@@ -297,7 +324,7 @@ const Distribution = {
                 cargaAtual[responsavel] =
                     (cargaAtual[responsavel] || 0) + 1;
 
-                console.info("[Distribution] Novo responsavel atribuido", {
+                distributionInfo("[Distribution] Novo responsavel atribuido", {
                     numeroAnalise: id,
                     indiceFila: indice,
                     motivo: escolha.motivo,
@@ -311,7 +338,7 @@ const Distribution = {
                     menorCarga: escolha.menorCarga
                 });
 
-                console.info("=== CARGA APOS ATRIBUICAO ===", {
+                distributionInfo("=== CARGA APOS ATRIBUICAO ===", {
                     id,
                     analistaEscolhido: responsavel,
                     motivo: escolha.motivo,
@@ -328,7 +355,7 @@ const Distribution = {
                     .filter(Boolean)
             );
 
-            console.info("[DEBUG DISTRIBUICAO] Hipotese 2 - antes da limpeza do Storage", {
+            distributionInfo("[DEBUG DISTRIBUICAO] Hipotese 2 - antes da limpeza do Storage", {
                 quantidadeIdsStorageAntesLimpeza: Object.keys(distribuicao).length,
                 quantidadeIdsFilaAtual: idsAtuais.size,
                 idsStorageAntesLimpeza: Object.keys(distribuicao),
@@ -339,7 +366,7 @@ const Distribution = {
 
                 if (!idsAtuais.has(id)) {
 
-                    console.info("[DEBUG DISTRIBUICAO] Hipotese 2 - removendo id do Storage", {
+                    distributionInfo("[DEBUG DISTRIBUICAO] Hipotese 2 - removendo id do Storage", {
                         id,
                         responsavelPersistido: distribuicao[id],
                         motivo: "id persistido nao encontrado na fila atual recebida pelo Distribution",
@@ -352,7 +379,7 @@ const Distribution = {
 
             });
 
-            console.info("[DEBUG DISTRIBUICAO] Hipotese 2 - depois da limpeza do Storage", {
+            distributionInfo("[DEBUG DISTRIBUICAO] Hipotese 2 - depois da limpeza do Storage", {
                 quantidadeIdsStorageDepoisLimpeza: Object.keys(distribuicao).length,
                 idsStorageDepoisLimpeza: Object.keys(distribuicao)
             });
@@ -364,7 +391,7 @@ const Distribution = {
             const processosPorAnalistaDepois =
                 this.calcularCargaAtual(processos, distribuicao);
 
-            console.info("[Distribution] Fim da distribuicao", {
+            distributionInfo("[Distribution] Fim da distribuicao", {
                 timestamp: Date.now(),
                 execId,
                 horaInicio: inicio,

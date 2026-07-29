@@ -3,6 +3,8 @@ import {
     NOTIFICATION_SYNC_INTERVAL_MINUTES
 } from "./notificationGroupingService.js";
 import { StorageService } from "../storage/notificationStorageService.js";
+import { Logger } from "../core/logger.js";
+import { safeSendMessage } from "../core/chromeMessaging.js";
 
 function obterTempoAtual() {
 
@@ -39,58 +41,59 @@ function formatarUltimaAtualizacao(valor = "") {
 
 }
 
-function enviarMensagemParaAba(tabId, action) {
-
-    return new Promise(resolve => {
-
-        chrome.tabs.sendMessage(
-            tabId,
-            { action },
-            resposta => {
-
-                if (chrome.runtime.lastError) {
-                    resolve({
-                        erro: chrome.runtime.lastError.message
-                    });
-                    return;
-                }
-
-                resolve(resposta);
-
-            }
-        );
-
-    });
-
-}
-
 export const NotificationService = {
 
     INTERVALO_MINUTOS: NOTIFICATION_SYNC_INTERVAL_MINUTES,
 
     async carregarInbox() {
 
-        const inbox = await StorageService.carregarInbox();
-        const grupos =
-            NotificationGroupingService.ordenarGrupos(inbox.grupos || []);
+        try {
 
-        return {
-            ...inbox,
-            grupos,
-            ultimaAtualizacaoTexto: formatarUltimaAtualizacao(
-                inbox.ultimaSincronizacao
-            )
-        };
+            const inbox = await StorageService.carregarInbox();
+            const grupos =
+                NotificationGroupingService.ordenarGrupos(inbox.grupos || []);
+
+            return {
+                ...inbox,
+                grupos,
+                ultimaAtualizacaoTexto: formatarUltimaAtualizacao(
+                    inbox.ultimaSincronizacao
+                )
+            };
+
+        } catch (erro) {
+
+            Logger.error("Falha ao carregar notificacoes.", erro);
+
+            return {
+                grupos: [],
+                ultimaSincronizacao: "",
+                totalNovos: 0,
+                ultimaAtualizacaoTexto: formatarUltimaAtualizacao()
+            };
+
+        }
+
 
     },
 
     async localizarAbaBsit() {
 
-        const abas = await chrome.tabs.query({
-            url: "http://jatai.bsit-br.com.br/*"
-        });
+        try {
 
-        return abas[0] || null;
+            const abas = await chrome.tabs.query({
+                url: "http://jatai.bsit-br.com.br/*"
+            });
+
+            return abas[0] || null;
+
+        } catch (erro) {
+
+            Logger.warn("Falha ao localizar aba do BSIT.", erro);
+
+            return null;
+
+        }
 
     },
 
@@ -104,96 +107,136 @@ export const NotificationService = {
             };
         }
 
-        return enviarMensagemParaAba(
-            aba.id,
-            "obterNotificacoes"
+        return safeSendMessage(
+            aba,
+            {
+                action: "obterNotificacoes"
+            }
         );
 
     },
 
     async sync() {
 
-        const inboxAtual = await StorageService.carregarInbox();
-        const resposta = await this.buscarNotificacoesNoBsit();
+        try {
 
-        if (!resposta || resposta.erro) {
+            const inboxAtual = await StorageService.carregarInbox();
+            const resposta = await this.buscarNotificacoesNoBsit();
+
+            if (!resposta || resposta.erro) {
+                return {
+                    ...inboxAtual,
+                    erro: resposta?.erro || "Nao foi possivel sincronizar notificacoes.",
+                    ultimaAtualizacaoTexto: formatarUltimaAtualizacao(
+                        inboxAtual.ultimaSincronizacao
+                    )
+                };
+            }
+
+            const sincronizacao =
+                await NotificationGroupingService.sincronizarGrupos(
+                    resposta.notificacoes || [],
+                    inboxAtual.grupos || []
+                );
+
+            const gruposOrdenados =
+                NotificationGroupingService.ordenarGrupos(
+                    sincronizacao.grupos
+                );
+
+            const inboxAtualizado = await StorageService.salvarInbox({
+                grupos: gruposOrdenados,
+                ultimaSincronizacao: sincronizacao.ultimaAtualizacaoIso,
+                totalNovos: gruposOrdenados.filter(
+                    grupo => !grupo.visto
+                ).length
+            });
+
+            await this.atualizarBadge(inboxAtualizado.grupos);
+
+            return {
+                ...inboxAtualizado,
+                totalNovosSincronizacao: sincronizacao.totalNovos,
+                totalAtualizados: sincronizacao.totalAtualizados,
+                ultimaAtualizacaoTexto: formatarUltimaAtualizacao(
+                    inboxAtualizado.ultimaSincronizacao
+                )
+            };
+
+        } catch (erro) {
+
+            Logger.error("Falha ao sincronizar notificacoes.", erro);
+
+            const inboxAtual = await StorageService.carregarInbox();
+
             return {
                 ...inboxAtual,
-                erro: resposta?.erro || "Nao foi possivel sincronizar notificacoes.",
+                erro: "Nao foi possivel sincronizar notificacoes.",
                 ultimaAtualizacaoTexto: formatarUltimaAtualizacao(
                     inboxAtual.ultimaSincronizacao
                 )
             };
+
         }
-
-        const sincronizacao =
-            await NotificationGroupingService.sincronizarGrupos(
-                resposta.notificacoes || [],
-                inboxAtual.grupos || []
-            );
-
-        const gruposOrdenados =
-            NotificationGroupingService.ordenarGrupos(
-                sincronizacao.grupos
-            );
-
-        const inboxAtualizado = await StorageService.salvarInbox({
-            grupos: gruposOrdenados,
-            ultimaSincronizacao: sincronizacao.ultimaAtualizacaoIso,
-            totalNovos: gruposOrdenados.filter(
-                grupo => !grupo.visto
-            ).length
-        });
-
-        await this.atualizarBadge(inboxAtualizado.grupos);
-
-        return {
-            ...inboxAtualizado,
-            totalNovosSincronizacao: sincronizacao.totalNovos,
-            totalAtualizados: sincronizacao.totalAtualizados,
-            ultimaAtualizacaoTexto: formatarUltimaAtualizacao(
-                inboxAtualizado.ultimaSincronizacao
-            )
-        };
 
     },
 
     async atualizarStatus(grupoId, status) {
 
-        const inbox = await StorageService.atualizarStatusGrupo(
-            grupoId,
-            status
-        );
-        const grupos =
-            NotificationGroupingService.ordenarGrupos(inbox.grupos || []);
+        try {
 
-        await this.atualizarBadge(grupos);
+            const inbox = await StorageService.atualizarStatusGrupo(
+                grupoId,
+                status
+            );
+            const grupos =
+                NotificationGroupingService.ordenarGrupos(inbox.grupos || []);
 
-        return {
-            ...inbox,
-            grupos,
-            ultimaAtualizacaoTexto: formatarUltimaAtualizacao(
-                inbox.ultimaSincronizacao
-            )
-        };
+            await this.atualizarBadge(grupos);
+
+            return {
+                ...inbox,
+                grupos,
+                ultimaAtualizacaoTexto: formatarUltimaAtualizacao(
+                    inbox.ultimaSincronizacao
+                )
+            };
+
+        } catch (erro) {
+
+            Logger.error("Falha ao atualizar status.", erro);
+
+            return this.carregarInbox();
+
+        }
 
     },
 
     async marcarComoVisto(grupoId) {
 
-        const inbox = await StorageService.marcarGrupoComoVisto(grupoId);
-        const grupos =
-            NotificationGroupingService.ordenarGrupos(inbox.grupos || []);
+        try {
 
-        await this.atualizarBadge(grupos);
+            const inbox = await StorageService.marcarGrupoComoVisto(grupoId);
+            const grupos =
+                NotificationGroupingService.ordenarGrupos(inbox.grupos || []);
 
-        return {
-            ...inbox,
-            grupos,
-            ultimaAtualizacaoTexto: formatarUltimaAtualizacao(
-                inbox.ultimaSincronizacao
-            )
-        };
+            await this.atualizarBadge(grupos);
+
+            return {
+                ...inbox,
+                grupos,
+                ultimaAtualizacaoTexto: formatarUltimaAtualizacao(
+                    inbox.ultimaSincronizacao
+                )
+            };
+
+        } catch (erro) {
+
+            Logger.error("Falha ao marcar grupo como visto.", erro);
+
+            return this.carregarInbox();
+
+        }
 
     },
 
@@ -207,13 +250,21 @@ export const NotificationService = {
             grupo => !grupo.visto
         ).length;
 
-        await chrome.action.setBadgeText({
-            text: totalNovos ? String(totalNovos) : ""
-        });
+        try {
 
-        await chrome.action.setBadgeBackgroundColor({
-            color: "#1d4f8f"
-        });
+            await chrome.action.setBadgeText({
+                text: totalNovos ? String(totalNovos) : ""
+            });
+
+            await chrome.action.setBadgeBackgroundColor({
+                color: "#1d4f8f"
+            });
+
+        } catch (erro) {
+
+            Logger.warn("Falha ao atualizar badge.", erro);
+
+        }
 
     },
 

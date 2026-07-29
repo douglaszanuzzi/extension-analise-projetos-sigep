@@ -8,13 +8,15 @@ export class Dom {
 
     static query(selector, root = document) {
 
-        return root.querySelector(selector);
+        return root?.querySelector?.(selector) || null;
 
     }
 
     static queryAll(selector, root = document) {
 
-        return [...root.querySelectorAll(selector)];
+        return root?.querySelectorAll
+            ? [...root.querySelectorAll(selector)]
+            : [];
 
     }
 
@@ -26,7 +28,7 @@ export class Dom {
 
         }
 
-        return elemento.innerText.trim();
+        return elemento.innerText?.trim() || "";
 
     }
 
@@ -44,7 +46,7 @@ export class Dom {
 
     static existe(selector, root = document) {
 
-        return root.querySelector(selector) !== null;
+        return Boolean(root?.querySelector?.(selector));
 
     }
 

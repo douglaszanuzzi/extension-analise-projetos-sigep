@@ -1,37 +1,100 @@
+function storageDebugAtivo() {
+
+    return globalThis.HABITESE_DEBUG !== false;
+
+}
+
+function storageInfo(...args) {
+
+    if (storageDebugAtivo()) {
+        console.info(...args);
+    }
+
+}
+
+function storageWarn(...args) {
+
+    if (storageDebugAtivo()) {
+        console.warn(...args);
+    }
+
+}
+
 const Storage = {
 
     CHAVE: "distribuicaoAnalises",
 
-    async carregar() {
+    dadosPadrao() {
 
-        const dados = await chrome.storage.local.get(this.CHAVE);
-
-        console.info("[Storage] carregar", {
-            chave: this.CHAVE,
-            dadosSalvos: dados[this.CHAVE] || null
-        });
-
-        const salvos = dados[this.CHAVE] || {
+        return {
             ultimoAnalista: null,
             distribuicao: {}
         };
 
-        salvos.distribuicao = salvos.distribuicao || {};
+    },
 
-        return salvos;
+    async carregar() {
+
+        try {
+
+            const dados = await chrome.storage.local.get(this.CHAVE);
+
+            storageInfo("[Storage] carregar", {
+                chave: this.CHAVE,
+                dadosSalvos: dados[this.CHAVE] || null
+            });
+
+            const salvos = dados[this.CHAVE] || this.dadosPadrao();
+
+            if (!salvos || typeof salvos !== "object") {
+                return this.dadosPadrao();
+            }
+
+            salvos.distribuicao =
+                salvos.distribuicao && typeof salvos.distribuicao === "object"
+                    ? salvos.distribuicao
+                    : {};
+
+            return salvos;
+
+        } catch (erro) {
+
+            storageWarn(
+                "[Storage] Falha ao carregar distribuicao. Usando dados padrao.",
+                erro
+            );
+
+            return this.dadosPadrao();
+
+        }
 
     },
 
     async salvar(dados) {
 
-        console.info("[Storage] salvar", {
-            chave: this.CHAVE,
-            dadosParaSalvar: dados
-        });
+        try {
 
-        await chrome.storage.local.set({
-            [this.CHAVE]: dados
-        });
+            storageInfo("[Storage] salvar", {
+                chave: this.CHAVE,
+                dadosParaSalvar: dados
+            });
+
+            await chrome.storage.local.set({
+                [this.CHAVE]: dados
+            });
+
+            return true;
+
+        } catch (erro) {
+
+            storageWarn(
+                "[Storage] Falha ao salvar distribuicao.",
+                erro
+            );
+
+            return false;
+
+        }
 
     }
 

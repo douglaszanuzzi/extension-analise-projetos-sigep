@@ -1,4 +1,24 @@
+function inspectorDebugAtivo() {
+
+    return globalThis.HABITESE_DEBUG !== false;
+
+}
+
+function inspectorInfo(...args) {
+
+    if (inspectorDebugAtivo()) {
+        console.info(...args);
+    }
+
+}
+
 const BSITInspector = {
+
+    textoCelula(celulas, indice) {
+
+        return celulas[indice]?.innerText?.trim() || "";
+
+    },
 
     inspecionarPagina() {
 
@@ -69,7 +89,7 @@ const BSITInspector = {
 
         total++;
 
-        const status = td[7].innerText.trim();
+        const status = this.textoCelula(td, 7);
 
         // ==========================================
         // Extrai o buildingConstruction-id
@@ -102,12 +122,12 @@ const BSITInspector = {
                 urlObra: buildingConstructionId
                     ? `${window.location.origin}/manager/tax-management/register/building-construction.jsf?buildingConstruction-id=${buildingConstructionId}`
                     : "",
-                proprietario: td[2].innerText.trim(),
-                area: td[5].innerText.trim(),
-                usoImovel: td[6].innerText.trim(),
+                proprietario: this.textoCelula(td, 2),
+                area: this.textoCelula(td, 5),
+                usoImovel: this.textoCelula(td, 6),
                 status,
-                tipo: td[9].innerText.trim(),
-                analista: td[10].innerText.trim()
+                tipo: this.textoCelula(td, 9),
+                analista: this.textoCelula(td, 10)
             });
 
         } else if (status === "Taxa para Pagamento") {
@@ -122,7 +142,7 @@ const BSITInspector = {
 
     });
 
-        console.info("[DEBUG DISTRIBUICAO] Hipotese 1 - leitura inicial da tabela", {
+        inspectorInfo("[DEBUG DISTRIBUICAO] Hipotese 1 - leitura inicial da tabela", {
             quantidadeLinhasDom: totalLinhasDomNoMomento,
             quantidadeProcessosLidos: total,
             quantidadeSemAnalise: semAnalise,
@@ -140,7 +160,7 @@ const BSITInspector = {
                 ? tabelaAtualizada.querySelectorAll("tbody tr.rich-table-row")
                 : [];
 
-            console.info("[DEBUG DISTRIBUICAO] Hipotese 1 - tabela apos 3 segundos", {
+            inspectorInfo("[DEBUG DISTRIBUICAO] Hipotese 1 - tabela apos 3 segundos", {
                 quantidadeLinhasDomInicial: totalLinhasDomNoMomento,
                 quantidadeLinhasDomDepois: linhasDepois.length,
                 houveMudancaQuantidadeLinhas:
@@ -212,7 +232,7 @@ const BSITInspector = {
 
                 indice,
 
-                texto: td.innerText.trim(),
+                texto: td.innerText?.trim() || "",
 
                 html: td.innerHTML.substring(0,300),
 
