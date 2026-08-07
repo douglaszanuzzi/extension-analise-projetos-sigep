@@ -13,7 +13,8 @@
         "tabs"
     ],
     "host_permissions": [
-        "http://jatai.bsit-br.com.br/*"
+        "http://jatai.bsit-br.com.br/*",
+         "https://jatai.sigep.com.br/*"
     ],
     "icons": {
         "128": "icons/icon-128.png"
@@ -34,7 +35,8 @@
     "content_scripts": [
         {
             "matches": [
-                "http://jatai.bsit-br.com.br/*"
+                "http://jatai.bsit-br.com.br/*",
+                 "https://jatai.sigep.com.br/*"
             ],
             "js": [
                 "js/core/storage.js",
