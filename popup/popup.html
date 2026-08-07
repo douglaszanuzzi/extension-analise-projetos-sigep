@@ -134,6 +134,15 @@
         <div id="listaAnalistas" style="display:flex;flex-direction:column;gap:6px;"></div>
         <hr style="border:none;border-top:1px solid #d9e0ea;margin:16px 0;">
         <h2 style="font-size:16px;margin:0 0 10px;">Debug</h2>
+        <hr style="border:none;border-top:1px solid #d9e0ea;margin:16px 0;">
+        <h2 style="font-size:16px;margin:0 0 10px;">Histórico de Distribuição</h2>
+        <div style="display:flex;gap:6px;margin-bottom:10px;">
+            <button id="btnExportarHistorico" type="button" style="width:auto;padding:0 12px;">Exportar CSV</button>
+            <button id="btnLimparHistorico" type="button" class="btnSecundario"
+                style="width:auto;padding:0 12px;">Limpar</button>
+        </div>
+        <div id="resumoHistorico" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;"></div>
+        <div id="listaHistorico" style="display:flex;flex-direction:column;gap:4px;max-height:300px;overflow-y:auto;"></div>
         <p style="font-size:12px;color:#5d6878;margin:0 0 10px;">
             Ativa logs detalhados no console para diagnóstico.
         </p>

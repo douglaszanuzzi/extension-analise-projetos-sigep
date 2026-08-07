@@ -657,3 +657,40 @@ tbody tr:hover{
     text-align: center;
     text-decoration: underline;
 }
+.resumoHistorico-item {
+    padding: 6px 10px;
+    border: 1px solid #d9e0ea;
+    border-radius: 6px;
+    background: #ffffff;
+    font-size: 12px;
+}
+
+.resumoHistorico-item strong {
+    font-size: 14px;
+    display: block;
+}
+
+.historico-item {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 4px;
+    padding: 6px 8px;
+    border: 1px solid #d9e0ea;
+    border-radius: 6px;
+    background: #ffffff;
+    font-size: 11px;
+}
+
+.historico-item-analista {
+    font-weight: bold;
+}
+
+.historico-item-data {
+    color: #687487;
+    text-align: right;
+}
+
+.historico-item-detalhes {
+    color: #4f5b6d;
+    grid-column: 1 / -1;
+}

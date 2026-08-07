@@ -1,5 +1,4 @@
 globalThis.HabiteseApp = globalThis.HabiteseApp || {};
-
 let distribuicaoEmAndamento = null;
 
 async function isDebugAtivo() {
@@ -10,6 +9,7 @@ async function isDebugAtivo() {
         return false;
     }
 }
+
 async function distributionInfo(...args) {
     const ativo = await isDebugAtivo();
     if (ativo) {
@@ -17,18 +17,18 @@ async function distributionInfo(...args) {
     }
 }
 
-function distributionWarn(...args) {
-    if (distributionDebugAtivo()) {
-        console.warn(...args);
+async function distributionWarn(...args) {
+    const ativo = await isDebugAtivo();
+    if (ativo) {
+        console.warn("[Distribution]", ...args);
     }
 }
 
 globalThis.HabiteseApp.Distribution = {
-
     ANALISTAS_PADRAO: ["Douglas", "Gabriel"],
     ANALISTAS: ["Douglas", "Gabriel"],
 
-        async carregarAnalistas() {
+    async carregarAnalistas() {
         try {
             const dados = await chrome.storage.local.get("analistas");
             const salvos = dados.analistas;
@@ -38,12 +38,12 @@ globalThis.HabiteseApp.Distribution = {
                 this.ANALISTAS = [...this.ANALISTAS_PADRAO];
             }
         } catch (erro) {
-            distributionWarn("[Distribution] Falha ao carregar analistas. Usando padrao.", erro);
+            await distributionWarn("[Distribution] Falha ao carregar analistas. Usando padrao.", erro);
             this.ANALISTAS = [...this.ANALISTAS_PADRAO];
         }
         return this.ANALISTAS;
     },
-        
+
     proximoAnalista(ultimo) {
         if (!ultimo) {
             return this.ANALISTAS[0];
@@ -106,7 +106,7 @@ globalThis.HabiteseApp.Distribution = {
 
     async distribuir(processos) {
         if (!Array.isArray(processos)) {
-            distributionWarn("[Distribution] Lista de processos invalida.", processos);
+            await distributionWarn("[Distribution] Lista de processos invalida.", processos);
             processos = [];
         }
         await this.carregarAnalistas();
@@ -115,7 +115,7 @@ globalThis.HabiteseApp.Distribution = {
         const inicio = Date.now();
 
         if (distribuicaoEmAndamento) {
-            distributionInfo("[Distribution] Execucao concorrente detectada; aguardando", {
+            await distributionInfo("[Distribution] Execucao concorrente detectada; aguardando", {
                 timestamp: Date.now(), execId,
                 execIdEmAndamento: distribuicaoEmAndamento.id,
                 inicioExecucaoEmAndamento: distribuicaoEmAndamento.inicio,
@@ -128,7 +128,7 @@ globalThis.HabiteseApp.Distribution = {
 
         const promise = (async () => {
             const Storage = globalThis.HabiteseApp.Storage;
-                        const dados = await Storage.carregar();
+            const dados = await Storage.carregar();
             execInfo.ultimoAnalistaCarregado = dados.ultimoAnalista;
             const distribuicao = dados.distribuicao;
 
@@ -141,13 +141,13 @@ globalThis.HabiteseApp.Distribution = {
             });
 
             const cargaAtual = this.calcularCargaAtual(processos, distribuicao);
+            const novasAtribuicoes = [];
             const processosPorAnalistaAntes = { ...cargaAtual };
-
             const novosProcessos = processos.filter(
                 processo => processo.buildingConstructionId && !distribuicao[processo.buildingConstructionId]
             );
 
-            distributionInfo("[Distribution] Inicio da distribuicao", {
+            await distributionInfo("[Distribution] Inicio da distribuicao", {
                 timestamp: Date.now(), execId, horaInicio: inicio,
                 quantidadeProcessos: processos.length, analistas: this.ANALISTAS,
                 ultimoAnalistaCarregado: execInfo.ultimoAnalistaCarregado,
@@ -159,28 +159,38 @@ globalThis.HabiteseApp.Distribution = {
 
             for (const [indice, processo] of processos.entries()) {
                 const id = processo.buildingConstructionId;
-
                 if (!id) {
                     processo.responsavel = "";
                     continue;
                 }
-
                 if (distribuicao[id]) {
                     processo.responsavel = distribuicao[id];
                     continue;
                 }
-
                 const escolha = this.escolherAnalistaPorCarga(cargaAtual, dados.ultimoAnalista);
                 processo.responsavel = escolha.analista;
                 distribuicao[id] = escolha.analista;
                 dados.ultimoAnalista = escolha.analista;
                 cargaAtual[escolha.analista] = (cargaAtual[escolha.analista] || 0) + 1;
+
+                novasAtribuicoes.push({
+                    data: new Date().toISOString(),
+                    analista: escolha.analista,
+                    buildingConstructionId: processo.buildingConstructionId || "",
+                    proprietario: processo.proprietario || "",
+                    area: processo.area || "",
+                    usoImovel: processo.usoImovel || "",
+                    tipo: processo.tipo || ""
+                });
+            }
+
+            if (novasAtribuicoes.length > 0) {
+                await Storage.salvarHistorico(novasAtribuicoes);
             }
 
             const idsAtuais = new Set(
                 processos.map(p => p.buildingConstructionId).filter(Boolean)
             );
-
             Object.keys(distribuicao).forEach(id => {
                 if (!idsAtuais.has(id)) {
                     delete distribuicao[id];
@@ -189,12 +199,10 @@ globalThis.HabiteseApp.Distribution = {
 
             await Storage.salvar(dados);
             execInfo.ultimoAnalistaSalvo = dados.ultimoAnalista;
-
             return processos;
         })();
 
         distribuicaoEmAndamento = { id: execId, inicio, promise };
-
         try {
             return await promise;
         } finally {

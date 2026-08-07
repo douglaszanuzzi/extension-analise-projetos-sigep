@@ -62,6 +62,7 @@ function mostrarConfiguracoes() {
     }
     carregarAnalistas();
     carregarEstadoDebug();
+    carregarHistorico();
 }
 
 async function enviarAcao(acao) {
@@ -384,7 +385,121 @@ async function alternarDebug() {
         Logger.error("Falha ao salvar estado de debug.", erro);
     }
 }
+// ==========================================
+// Histórico de Distribuição
+// ==========================================
 
+async function carregarHistorico() {
+    const container = document.getElementById("listaHistorico");
+    const resumo = document.getElementById("resumoHistorico");
+    if (!container || !resumo) return;
+    try {
+        const dados = await chrome.storage.local.get("historicoDistribuicao");
+        const historico = Array.isArray(dados.historicoDistribuicao) 
+            ? dados.historicoDistribuicao 
+            : [];
+        
+        container.innerHTML = "";
+        resumo.innerHTML = "";
+
+        if (historico.length === 0) {
+            container.innerHTML = '<p style="font-size:12px;color:#687487;">Nenhuma distribuição registrada.</p>';
+            return;
+        }
+
+        const contagem = {};
+        historico.forEach(entry => {
+            contagem[entry.analista] = (contagem[entry.analista] || 0) + 1;
+        });
+
+        Object.entries(contagem).forEach(([nome, total]) => {
+            const item = document.createElement("div");
+            item.className = "resumoHistorico-item";
+            item.innerHTML = `<strong>${total}</strong>${nome}`;
+            resumo.appendChild(item);
+        });
+
+        const recentes = [...historico].reverse().slice(0, 50);
+        recentes.forEach(entry => {
+            const item = document.createElement("div");
+            item.className = "historico-item";
+            const data = new Date(entry.data);
+            const dataFmt = data.toLocaleDateString("pt-BR") + " " + 
+                data.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+            
+            const spanAnalista = document.createElement("span");
+            spanAnalista.className = "historico-item-analista";
+            spanAnalista.textContent = entry.analista;
+            
+            const spanData = document.createElement("span");
+            spanData.className = "historico-item-data";
+            spanData.textContent = dataFmt;
+            
+            const spanDetalhes = document.createElement("span");
+            spanDetalhes.className = "historico-item-detalhes";
+            spanDetalhes.textContent = [
+                entry.proprietario || "Sem proprietário",
+                entry.area || "",
+                entry.usoImovel || "",
+                entry.tipo || ""
+            ].filter(Boolean).join(" · ");
+            
+            item.appendChild(spanAnalista);
+            item.appendChild(spanData);
+            item.appendChild(spanDetalhes);
+            container.appendChild(item);
+        });
+    } catch (erro) {
+        Logger.error("Falha ao carregar histórico.", erro);
+    }
+}
+
+function exportarHistoricoCSV() {
+    chrome.storage.local.get("historicoDistribuicao").then(dados => {
+        const historico = Array.isArray(dados.historicoDistribuicao) 
+            ? dados.historicoDistribuicao 
+            : [];
+        if (historico.length === 0) {
+            mostrarErroConfig("Não há histórico para exportar.");
+            return;
+        }
+        const cabecalho = "Data,Analista,Processo,Proprietario,Area,Uso,Tipo\n";
+        const linhas = historico.map(e => {
+            return [
+                e.data || "",
+                `"${(e.analista || "").replace(/"/g, '""')}"`,
+                `"${(e.buildingConstructionId || "").replace(/"/g, '""')}"`,
+                `"${(e.proprietario || "").replace(/"/g, '""')}"`,
+                `"${(e.area || "").replace(/"/g, '""')}"`,
+                `"${(e.usoImovel || "").replace(/"/g, '""')}"`,
+                `"${(e.tipo || "").replace(/"/g, '""')}"`
+            ].join(",");
+        }).join("\n");
+        
+        const csv = cabecalho + linhas;
+        const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `historico-distribuicao-${new Date().toISOString().slice(0, 10)}.csv`;
+        link.click();
+        URL.revokeObjectURL(url);
+    }).catch(erro => {
+        Logger.error("Falha ao exportar histórico.", erro);
+        mostrarErroConfig("Não foi possível exportar o histórico.");
+    });
+}
+
+async function limparHistorico() {
+    try {
+        await chrome.storage.local.set({ historicoDistribuicao: [] });
+        await carregarHistorico();
+        mostrarErroConfig("Histórico limpo.");
+    } catch (erro) {
+        Logger.error("Falha ao limpar histórico.", erro);
+        mostrarErroConfig("Não foi possível limpar o histórico.");
+    }
+}
 
 // ==========================================
 // Inicializacao
@@ -428,6 +543,9 @@ export async function iniciarPopup() {
     adicionarEvento("btnCancelarCriarSenha", "click", fecharModalCriarSenha);
     adicionarEvento("btnConfirmarRecuperacao", "click", confirmarRecuperacao);
     adicionarEvento("btnCancelarRecuperacao", "click", fecharModalRecuperacao);
+        // Eventos de histórico
+    adicionarEvento("btnExportarHistorico", "click", exportarHistoricoCSV);
+    adicionarEvento("btnLimparHistorico", "click", limparHistorico);
     const inputSenha = document.getElementById("inputSenha");
     if (inputSenha) {
         inputSenha.addEventListener("keydown", (event) => {

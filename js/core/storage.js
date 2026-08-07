@@ -68,5 +68,38 @@ globalThis.HabiteseApp.Storage = {
             storageWarn("[Storage] Falha ao salvar distribuicao.", erro);
             return false;
         }
+    },
+    async salvarHistorico(entradas) {
+        if (!Array.isArray(entradas) || entradas.length === 0) return;
+        try {
+            const dados = await chrome.storage.local.get("historicoDistribuicao");
+            const historico = Array.isArray(dados.historicoDistribuicao) 
+                ? dados.historicoDistribuicao 
+                : [];
+            historico.push(...entradas);
+            const historicoLimitado = historico.slice(-1000);
+            await chrome.storage.local.set({ historicoDistribuicao: historicoLimitado });
+        } catch (erro) {
+            console.error("[Storage] Falha ao salvar historico.", erro);
+        }
+    },
+
+    async carregarHistorico() {
+        try {
+            const dados = await chrome.storage.local.get("historicoDistribuicao");
+            return Array.isArray(dados.historicoDistribuicao) 
+                ? dados.historicoDistribuicao 
+                : [];
+        } catch {
+            return [];
+        }
+    },
+
+    async limparHistorico() {
+        try {
+            await chrome.storage.local.set({ historicoDistribuicao: [] });
+        } catch (erro) {
+            console.error("[Storage] Falha ao limpar historico.", erro);
+        }
     }
 };
