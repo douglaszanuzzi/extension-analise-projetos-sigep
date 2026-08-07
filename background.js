@@ -36,6 +36,24 @@ function configurarSincronizacaoAutomatica() {
     }
 }
 
+function criarNotificacaoPush(totalNovos, grupos = []) {
+    if (!chrome?.notifications?.create) return;
+
+    const novosGrupos = (grupos || []).filter(g => !g.visto);
+    if (novosGrupos.length === 0) return;
+
+    const ccis = novosGrupos.slice(0, 3).map(g => g.cci || "Sem CCI").join(", ");
+    const suffix = novosGrupos.length > 3 ? " e outros" : "";
+
+    chrome.notifications.create({
+        type: "basic",
+        iconUrl: chrome.runtime.getURL("icons/icon-128.png"),
+        title: "Habitese Robot",
+        message: `${totalNovos} nova(s) notificacao(oes) do BSIT.\nCCI: ${ccis}${suffix}`,
+        priority: 2
+    });
+}
+
 chrome.runtime.onInstalled.addListener(() => {
     configurarSidePanel();
     configurarSincronizacaoAutomatica();
@@ -49,8 +67,23 @@ chrome.runtime.onStartup.addListener(() => {
 chrome.alarms.onAlarm.addListener(async alarm => {
     if (alarm.name !== NOTIFICATION_SYNC_ALARM) return;
     try {
-        await NotificationService.sync();
+        const resultado = await NotificationService.sync();
+        if (resultado && resultado.totalNovosSincronizacao > 0) {
+            criarNotificacaoPush(resultado.totalNovosSincronizacao, resultado.grupos);
+        }
     } catch (erro) {
         Logger.warn("Falha na sincronizacao automatica.", erro);
     }
 });
+
+chrome.notifications.onClicked.addListener(async (notificationId) => {
+    try {
+        const janela = await chrome.windows.getLastFocused();
+        if (janela) {
+            await chrome.sidePanel.open({ windowId: janela.id });
+        }
+    } catch (erro) {
+        Logger.warn("Falha ao abrir side panel a partir da notificacao.", erro);
+    }
+    chrome.notifications.clear(notificationId);
+});"background.js"

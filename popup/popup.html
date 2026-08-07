@@ -5,7 +5,7 @@
 
     <meta charset="UTF-8">
 
-    <title>Habitese Robot</title>
+    <title>Analysis Control</title>
 
     <link rel="stylesheet" href="popup.css">
 
@@ -14,8 +14,8 @@
 
     <header class="topo">
         <div class="topoConteudo">
-            <h1>Habitese Robot</h1>
-            <p>Distribuição de Análises SIGEP</p>
+            <h1>Analysis Control</h1>
+            <p>Monitoramento Inteligente de Processos SIGEP</p>
         </div>
         <button id="btnConfig" class="btnConfig" title="Configurações">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4f5b6d" stroke-width="2" stroke-linecap="round"
@@ -132,6 +132,15 @@
         </div>
         <p id="mensagemConfiguracoes" class="mensagem"></p>
         <div id="listaAnalistas" style="display:flex;flex-direction:column;gap:6px;"></div>
+        <hr style="border:none;border-top:1px solid #d9e0ea;margin:16px 0;">
+        <h2 style="font-size:16px;margin:0 0 10px;">Debug</h2>
+        <p style="font-size:12px;color:#5d6878;margin:0 0 10px;">
+            Ativa logs detalhados no console para diagnóstico.
+        </p>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+            <input type="checkbox" id="toggleDebug" style="width:auto;min-height:auto;">
+            <span style="font-size:13px;">Modo Debug</span>
+        </label>
     </section>
     <script type="module" src="popup.js"></script>
 <div id="modalSenha" class="modal-overlay oculto">

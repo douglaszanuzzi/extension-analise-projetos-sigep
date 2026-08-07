@@ -1,15 +1,19 @@
 globalThis.HabiteseApp = globalThis.HabiteseApp || {};
 
-function inspectorDebugAtivo() {
-    return globalThis.HABITESE_DEBUG !== false;
-}
-
-function inspectorInfo(...args) {
-    if (inspectorDebugAtivo()) {
-        console.info(...args);
+async function inspectorInfo(...args) {
+    const ativo = await isDebugAtivo();
+    if (ativo) {
+        console.info("[Inspector]", ...args);
     }
 }
-
+async function isDebugAtivo() {
+    try {
+        const dados = await chrome.storage.local.get("debugAtivo");
+        return dados.debugAtivo === true;
+    } catch {
+        return false;
+    }
+}
 globalThis.HabiteseApp.BSITInspector = {
 
     textoCelula(celulas, indice) {

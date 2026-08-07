@@ -2,13 +2,18 @@ globalThis.HabiteseApp = globalThis.HabiteseApp || {};
 
 let distribuicaoEmAndamento = null;
 
-function distributionDebugAtivo() {
-    return globalThis.HABITESE_DEBUG !== false;
+async function isDebugAtivo() {
+    try {
+        const dados = await chrome.storage.local.get("debugAtivo");
+        return dados.debugAtivo === true;
+    } catch {
+        return false;
+    }
 }
-
-function distributionInfo(...args) {
-    if (distributionDebugAtivo()) {
-        console.info(...args);
+async function distributionInfo(...args) {
+    const ativo = await isDebugAtivo();
+    if (ativo) {
+        console.info("[Distribution]", ...args);
     }
 }
 

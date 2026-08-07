@@ -61,6 +61,7 @@ function mostrarConfiguracoes() {
         viewConfig.classList.add("visivel");
     }
     carregarAnalistas();
+    carregarEstadoDebug();
 }
 
 async function enviarAcao(acao) {
@@ -362,6 +363,29 @@ async function confirmarRecuperacao() {
     }
 }
 
+async function carregarEstadoDebug() {
+    try {
+        const dados = await chrome.storage.local.get("debugAtivo");
+        const checkbox = document.getElementById("toggleDebug");
+        if (checkbox) {
+            checkbox.checked = dados.debugAtivo === true;
+        }
+    } catch (erro) {
+        Logger.error("Falha ao carregar estado de debug.", erro);
+    }
+}
+
+async function alternarDebug() {
+    const checkbox = document.getElementById("toggleDebug");
+    if (!checkbox) return;
+    try {
+        await chrome.storage.local.set({ debugAtivo: checkbox.checked });
+    } catch (erro) {
+        Logger.error("Falha ao salvar estado de debug.", erro);
+    }
+}
+
+
 // ==========================================
 // Inicializacao
 // ==========================================
@@ -416,4 +440,7 @@ export async function iniciarPopup() {
             if (event.key === "Enter") { event.preventDefault(); confirmarRecuperacao(); }
         });
     }
+        // Eventos de debug
+    await carregarEstadoDebug();
+    adicionarEvento("toggleDebug", "change", alternarDebug);
 }

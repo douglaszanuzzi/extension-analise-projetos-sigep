@@ -3,7 +3,14 @@ globalThis.HabiteseApp = globalThis.HabiteseApp || {};
 function storageDebugAtivo() {
     return globalThis.HABITESE_DEBUG !== false;
 }
-
+async function isDebugAtivo() {
+    try {
+        const dados = await chrome.storage.local.get("debugAtivo");
+        return dados.debugAtivo === true;
+    } catch {
+        return false;
+    }
+}
 function storageInfo(...args) {
     if (storageDebugAtivo()) {
         console.info(...args);

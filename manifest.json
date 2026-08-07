@@ -1,42 +1,49 @@
 {
-  "manifest_version": 3,
-  "name": "Robot Monitoramento Analises",
-  "version": "0.4.0",
-  "description": "Ferramenta para inspeção e automação do BSIT.",
-  "permissions": [
-    "activeTab",
-    "alarms",
-    "sidePanel",
-    "scripting",
-    "storage",
-    "tabs"
-  ],
-  "host_permissions": [
-    "http://jatai.bsit-br.com.br/*"
-  ],
-  "action": {
-    "default_title": "Habitese Robot"
-  },
-  "background": {
-    "service_worker": "background.js",
-    "type": "module"
-  },
-  "side_panel": {
-    "default_path": "popup/popup.html"
-  },
-  "content_scripts": [
-    {
-      "matches": [
-        "http://jatai.bsit-br.com.br/*"
-      ],
-    "js": [
-      "js/core/storage.js",
-      "js/core/distribution.js",
-      "js/bsit/inspector.js",
-      "js/bsit/notificacoes.js",
-      "content.js"
+    "manifest_version": 3,
+    "name": "Robot Monitoramento Analises",
+    "version": "0.4.0",
+    "description": "Ferramenta para inspeção e automação do BSIT.",
+    "permissions": [
+        "activeTab",
+        "alarms",
+        "notifications",
+        "sidePanel",
+        "scripting",
+        "storage",
+        "tabs"
     ],
-      "run_at": "document_idle"
-    }
-  ]
+    "host_permissions": [
+        "http://jatai.bsit-br.com.br/*"
+    ],
+    "icons": {
+        "128": "icons/icon-128.png"
+    },
+    "action": {
+        "default_title": "Habitese Robot",
+        "default_icon": {
+            "128": "icons/icon-128.png"
+        }
+    },
+    "background": {
+        "service_worker": "background.js",
+        "type": "module"
+    },
+    "side_panel": {
+        "default_path": "popup/popup.html"
+    },
+    "content_scripts": [
+        {
+            "matches": [
+                "http://jatai.bsit-br.com.br/*"
+            ],
+            "js": [
+                "js/core/storage.js",
+                "js/core/distribution.js",
+                "js/bsit/inspector.js",
+                "js/bsit/notificacoes.js",
+                "content.js"
+            ],
+            "run_at": "document_idle"
+        }
+    ]
 }
