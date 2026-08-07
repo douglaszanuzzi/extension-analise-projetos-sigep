@@ -289,6 +289,7 @@ select{
     padding:10px;
     border-left-width:5px;
     border-left-style:solid;
+    cursor: pointer;
 
 }
 
@@ -299,14 +300,12 @@ select{
 
 }
 
-.grupoNotificacao.grupoNaoVisto{
-
-    border-color:#69a7f2;
-    border-left-color:#1d4f8f;
-    background:#eef6ff;
-    box-shadow:0 0 0 2px rgba(29, 79, 143, 0.10);
-    animation:destaqueNovoGrupo 900ms ease-out;
-
+.grupoNotificacao.grupoNaoVisto {
+    border-color: #3b82f6;
+    border-left-color: #1d4f8f;
+    background: #dbeafe;
+    box-shadow: 0 0 0 3px rgba(29, 79, 143, 0.18);
+    animation: destaqueNovoGrupo 900ms ease-out;
 }
 
 .grupoNotificacao.status-pending{
