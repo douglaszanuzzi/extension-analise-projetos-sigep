@@ -20,8 +20,25 @@ function distributionWarn(...args) {
 
 globalThis.HabiteseApp.Distribution = {
 
+    ANALISTAS_PADRAO: ["Douglas", "Gabriel"],
     ANALISTAS: ["Douglas", "Gabriel"],
 
+        async carregarAnalistas() {
+        try {
+            const dados = await chrome.storage.local.get("analistas");
+            const salvos = dados.analistas;
+            if (Array.isArray(salvos) && salvos.length > 0) {
+                this.ANALISTAS = salvos;
+            } else {
+                this.ANALISTAS = [...this.ANALISTAS_PADRAO];
+            }
+        } catch (erro) {
+            distributionWarn("[Distribution] Falha ao carregar analistas. Usando padrao.", erro);
+            this.ANALISTAS = [...this.ANALISTAS_PADRAO];
+        }
+        return this.ANALISTAS;
+    },
+        
     proximoAnalista(ultimo) {
         if (!ultimo) {
             return this.ANALISTAS[0];
@@ -87,6 +104,7 @@ globalThis.HabiteseApp.Distribution = {
             distributionWarn("[Distribution] Lista de processos invalida.", processos);
             processos = [];
         }
+        await this.carregarAnalistas();
 
         const execId = `dist-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
         const inicio = Date.now();
@@ -105,9 +123,18 @@ globalThis.HabiteseApp.Distribution = {
 
         const promise = (async () => {
             const Storage = globalThis.HabiteseApp.Storage;
-            const dados = await Storage.carregar();
+                        const dados = await Storage.carregar();
             execInfo.ultimoAnalistaCarregado = dados.ultimoAnalista;
             const distribuicao = dados.distribuicao;
+
+            // Limpar atribuicoes de analistas que foram removidos da lista
+            const analistasValidos = new Set(this.ANALISTAS);
+            Object.keys(distribuicao).forEach(id => {
+                if (!analistasValidos.has(distribuicao[id])) {
+                    delete distribuicao[id];
+                }
+            });
+
             const cargaAtual = this.calcularCargaAtual(processos, distribuicao);
             const processosPorAnalistaAntes = { ...cargaAtual };
 

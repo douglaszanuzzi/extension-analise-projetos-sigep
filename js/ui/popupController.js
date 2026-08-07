@@ -5,7 +5,11 @@ import {
     renderizarAnalises,
     mostrarMensagem,
     traduzirErro,
-    contarPorResponsavel
+    contarPorResponsavel,
+    popularFiltroAnalistas,
+    popularLegendaAnalistas,
+    popularDashboardAnalistas,
+    atualizarDashboard
 } from "./analisesView.js";
 import {
     renderizarNotificacoes,
@@ -15,6 +19,7 @@ import {
 
 let ultimasAnalises = [];
 let notificacoesCarregadas = false;
+let analistasAtuais = ["Douglas", "Gabriel"];
 
 const estado = {
     gruposNotificacoes: [],
@@ -23,24 +28,39 @@ const estado = {
 };
 
 function alternarAba(novaAba) {
-    const abaAnalises = document.getElementById("abaAnalises");
-    const abaNotificacoes = document.getElementById("abaNotificacoes");
-    const viewAnalises = document.getElementById("viewAnalises");
-    const viewNotificacoes = document.getElementById("viewNotificacoes");
-    if (abaAnalises) {
-        abaAnalises.classList.toggle("ativa", novaAba === "analises");
+    const abas = ["analises", "notificacoes"];
+    abas.forEach(aba => {
+        const botao = document.getElementById(`aba${aba.charAt(0).toUpperCase() + aba.slice(1)}`);
+        const view = document.getElementById(`view${aba.charAt(0).toUpperCase() + aba.slice(1)}`);
+        if (botao) botao.classList.toggle("ativa", novaAba === aba);
+        if (view) {
+            view.classList.toggle("visivel", novaAba === aba);
+            view.classList.toggle("oculto", novaAba !== aba);
+        }
+    });
+    const viewConfig = document.getElementById("viewConfiguracoes");
+    if (viewConfig) {
+        viewConfig.classList.add("oculto");
+        viewConfig.classList.remove("visivel");
     }
-    if (abaNotificacoes) {
-        abaNotificacoes.classList.toggle("ativa", novaAba === "notificacoes");
+}
+
+function mostrarConfiguracoes() {
+    ["analises", "notificacoes"].forEach(aba => {
+        const view = document.getElementById(`view${aba.charAt(0).toUpperCase() + aba.slice(1)}`);
+        if (view) {
+            view.classList.remove("visivel");
+            view.classList.add("oculto");
+        }
+        const botao = document.getElementById(`aba${aba.charAt(0).toUpperCase() + aba.slice(1)}`);
+        if (botao) botao.classList.remove("ativa");
+    });
+    const viewConfig = document.getElementById("viewConfiguracoes");
+    if (viewConfig) {
+        viewConfig.classList.remove("oculto");
+        viewConfig.classList.add("visivel");
     }
-    if (viewAnalises) {
-        viewAnalises.classList.toggle("visivel", novaAba === "analises");
-        viewAnalises.classList.toggle("oculto", novaAba !== "analises");
-    }
-    if (viewNotificacoes) {
-        viewNotificacoes.classList.toggle("visivel", novaAba === "notificacoes");
-        viewNotificacoes.classList.toggle("oculto", novaAba !== "notificacoes");
-    }
+    carregarAnalistas();
 }
 
 async function enviarAcao(acao) {
@@ -54,12 +74,10 @@ async function enviarAcao(acao) {
         return;
     }
     if (!tab) {
-        Logger.error("Nenhuma aba ativa.");
         mostrarMensagem("Nenhuma aba ativa encontrada.");
         return;
     }
     if (typeof tab.id !== "number") {
-        Logger.warn("Aba ativa sem id valido.", tab);
         mostrarMensagem("Nao foi possivel comunicar com a aba ativa.");
         return;
     }
@@ -74,20 +92,9 @@ async function enviarAcao(acao) {
     }
     const analises = Array.isArray(resposta.analises) ? resposta.analises : [];
     const totaisPorResponsavel = contarPorResponsavel(analises);
-    const totalPendentes = document.getElementById("totalPendentes");
-    const totalDouglas = document.getElementById("totalDouglas");
-    const totalGabriel = document.getElementById("totalGabriel");
-    if (totalPendentes) {
-        totalPendentes.textContent = resposta.resumo?.semAnalise || 0;
-    }
-    if (totalDouglas) {
-        totalDouglas.textContent = totaisPorResponsavel.Douglas || 0;
-    }
-    if (totalGabriel) {
-        totalGabriel.textContent = totaisPorResponsavel.Gabriel || 0;
-    }
+    atualizarDashboard(totaisPorResponsavel, resposta.resumo?.semAnalise);
     ultimasAnalises = analises;
-    renderizarAnalises(ultimasAnalises);
+    renderizarAnalises(ultimasAnalises, analistasAtuais);
 }
 
 function iniciarSincronizacaoAutomaticaLocal() {
@@ -106,12 +113,266 @@ function adicionarEvento(id, evento, manipulador) {
     elemento.addEventListener(evento, manipulador);
 }
 
+// ==========================================
+// Gestao de Analistas
+// ==========================================
+
+async function carregarAnalistas() {
+    try {
+        const dados = await chrome.storage.local.get("analistas");
+        const salvos = dados.analistas;
+        let lista;
+        if (Array.isArray(salvos) && salvos.length > 0) {
+            lista = salvos;
+        } else {
+            lista = ["Douglas", "Gabriel"];
+            await chrome.storage.local.set({ analistas: lista });
+        }
+        analistasAtuais = lista;
+        renderizarAnalistas(lista);
+        popularFiltroAnalistas(lista);
+        popularLegendaAnalistas(lista);
+        popularDashboardAnalistas(lista);
+    } catch (erro) {
+        Logger.error("Falha ao carregar analistas.", erro);
+    }
+}
+
+async function adicionarAnalista() {
+    const input = document.getElementById("inputNovoAnalista");
+    if (!input || !input.value.trim()) return;
+    const nome = input.value.trim();
+    try {
+        const dados = await chrome.storage.local.get("analistas");
+        const lista = Array.isArray(dados.analistas) && dados.analistas.length > 0
+            ? dados.analistas
+            : ["Douglas", "Gabriel"];
+        if (lista.includes(nome)) {
+            mostrarErroConfig(`Analista "${nome}" ja existe.`);
+            return;
+        }
+        lista.push(nome);
+        await chrome.storage.local.set({ analistas: lista });
+        input.value = "";
+        analistasAtuais = lista;
+        renderizarAnalistas(lista);
+        popularFiltroAnalistas(lista);
+        popularLegendaAnalistas(lista);
+        popularDashboardAnalistas(lista);
+    } catch (erro) {
+        Logger.error("Falha ao adicionar analista.", erro);
+        mostrarErroConfig("Nao foi possivel adicionar o analista.");
+    }
+}
+
+async function removerAnalista(nome) {
+    try {
+        const dados = await chrome.storage.local.get("analistas");
+        const lista = Array.isArray(dados.analistas) && dados.analistas.length > 0
+            ? dados.analistas
+            : ["Douglas", "Gabriel"];
+        const novaLista = lista.filter(item => item !== nome);
+        if (novaLista.length === 0) {
+            mostrarErroConfig("Deve existir pelo menos um analista.");
+            renderizarAnalistas(lista);
+            return;
+        }
+        await chrome.storage.local.set({ analistas: novaLista });
+        analistasAtuais = novaLista;
+        renderizarAnalistas(novaLista);
+        popularFiltroAnalistas(novaLista);
+        popularLegendaAnalistas(novaLista);
+        popularDashboardAnalistas(novaLista);
+    } catch (erro) {
+        Logger.error("Falha ao remover analista.", erro);
+        mostrarErroConfig("Nao foi possivel remover o analista.");
+    }
+}
+
+function renderizarAnalistas(lista) {
+    const container = document.getElementById("listaAnalistas");
+    if (!container) return;
+    container.innerHTML = "";
+    lista.forEach(nome => {
+        const item = document.createElement("div");
+        item.className = "listaAnalistas-item";
+        const span = document.createElement("span");
+        span.textContent = nome;
+        const botao = document.createElement("button");
+        botao.type = "button";
+        botao.textContent = "Remover";
+        botao.addEventListener("click", () => removerAnalista(nome));
+        item.appendChild(span);
+        item.appendChild(botao);
+        container.appendChild(item);
+    });
+}
+
+function mostrarErroConfig(mensagem) {
+    const elemento = document.getElementById("mensagemConfiguracoes");
+    if (elemento) {
+        elemento.textContent = mensagem;
+        elemento.classList.add("visivel");
+        setTimeout(() => elemento.classList.remove("visivel"), 3000);
+    }
+}
+
+// ==========================================
+// Sistema de Senha
+// ==========================================
+
+async function abrirConfig() {
+    try {
+        const dados = await chrome.storage.local.get("configSenha");
+        if (!dados.configSenha) {
+            mostrarModalCriarSenha();
+        } else {
+            mostrarModalSenha();
+        }
+    } catch (erro) {
+        Logger.error("Falha ao verificar senha.", erro);
+    }
+}
+
+function mostrarModalSenha(mensagemInfo = "") {
+    const modal = document.getElementById("modalSenha");
+    const input = document.getElementById("inputSenha");
+    const erro = document.getElementById("erroSenha");
+    const desc = document.getElementById("descModalSenha");
+    if (!modal || !input || !erro) return;
+    input.value = "";
+    erro.classList.add("oculto");
+    desc.textContent = mensagemInfo || "Digite a senha para acessar as configuracoes.";
+    modal.classList.remove("oculto");
+    input.focus();
+}
+
+function fecharModalSenha() {
+    const modal = document.getElementById("modalSenha");
+    if (modal) modal.classList.add("oculto");
+}
+
+async function confirmarSenha() {
+    const input = document.getElementById("inputSenha");
+    const erro = document.getElementById("erroSenha");
+    if (!input || !erro) return;
+    const senha = input.value;
+    const dados = await chrome.storage.local.get("configSenha");
+    if (senha === dados.configSenha) {
+        fecharModalSenha();
+        mostrarConfiguracoes();
+    } else {
+        erro.textContent = "Senha incorreta.";
+        erro.classList.remove("oculto");
+        input.value = "";
+        input.focus();
+    }
+}
+
+function mostrarModalCriarSenha() {
+    const modal = document.getElementById("modalCriarSenha");
+    if (!modal) return;
+    ["inputNovaSenha", "inputConfirmarNovaSenha", "inputPerguntaRecuperacao", "inputRespostaRecuperacao"].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = "";
+    });
+    const erro = document.getElementById("erroCriarSenha");
+    if (erro) erro.classList.add("oculto");
+    modal.classList.remove("oculto");
+    document.getElementById("inputNovaSenha")?.focus();
+}
+
+function fecharModalCriarSenha() {
+    const modal = document.getElementById("modalCriarSenha");
+    if (modal) modal.classList.add("oculto");
+}
+
+async function salvarNovaSenha() {
+    const senha = document.getElementById("inputNovaSenha")?.value || "";
+    const confirmar = document.getElementById("inputConfirmarNovaSenha")?.value || "";
+    const pergunta = document.getElementById("inputPerguntaRecuperacao")?.value || "";
+    const resposta = document.getElementById("inputRespostaRecuperacao")?.value || "";
+    const erro = document.getElementById("erroCriarSenha");
+    if (!erro) return;
+
+    if (!senha || senha.length < 3) {
+        erro.textContent = "Senha deve ter pelo menos 3 caracteres.";
+        erro.classList.remove("oculto");
+        return;
+    }
+    if (senha !== confirmar) {
+        erro.textContent = "As senhas nao coincidem.";
+        erro.classList.remove("oculto");
+        return;
+    }
+    if (!pergunta.trim() || !resposta.trim()) {
+        erro.textContent = "Pergunta e resposta de seguranca sao obrigatorias.";
+        erro.classList.remove("oculto");
+        return;
+    }
+
+    await chrome.storage.local.set({
+        configSenha: senha,
+        perguntaRecuperacao: pergunta.trim(),
+        respostaRecuperacao: resposta.toLowerCase().trim()
+    });
+
+    fecharModalCriarSenha();
+    mostrarConfiguracoes();
+}
+
+async function mostrarModalRecuperacao() {
+    fecharModalSenha();
+    const modal = document.getElementById("modalRecuperacao");
+    const perguntaEl = document.getElementById("perguntaRecuperacaoTexto");
+    const erro = document.getElementById("erroRecuperacao");
+    const input = document.getElementById("inputRespostaRecuperacaoModal");
+    if (!modal || !perguntaEl) return;
+
+    const dados = await chrome.storage.local.get("perguntaRecuperacao");
+    if (!dados.perguntaRecuperacao) {
+        perguntaEl.textContent = "Nenhuma pergunta de seguranca configurada. Contate o administrador.";
+    } else {
+        perguntaEl.textContent = dados.perguntaRecuperacao;
+    }
+    if (erro) erro.classList.add("oculto");
+    if (input) input.value = "";
+    modal.classList.remove("oculto");
+    input?.focus();
+}
+
+function fecharModalRecuperacao() {
+    const modal = document.getElementById("modalRecuperacao");
+    if (modal) modal.classList.add("oculto");
+}
+
+async function confirmarRecuperacao() {
+    const resposta = document.getElementById("inputRespostaRecuperacaoModal")?.value?.toLowerCase().trim() || "";
+    const erro = document.getElementById("erroRecuperacao");
+    if (!erro) return;
+
+    const dados = await chrome.storage.local.get("respostaRecuperacao");
+    if (resposta && resposta === dados.respostaRecuperacao) {
+        await chrome.storage.local.set({ configSenha: "habitese" });
+        fecharModalRecuperacao();
+        mostrarModalSenha("Senha redefinida para 'habitese'. Faca login e altere nas configuracoes.");
+    } else {
+        erro.textContent = "Resposta incorreta.";
+        erro.classList.remove("oculto");
+    }
+}
+
+// ==========================================
+// Inicializacao
+// ==========================================
+
 export async function iniciarPopup() {
     Logger.info("Popup iniciado.");
     alternarAba("analises");
     iniciarSincronizacaoAutomaticaLocal();
+    await carregarAnalistas();
     adicionarEvento("btnTabela", "click", () => enviarAcao("analisarTabela"));
-    adicionarEvento("filtroAnalista", "change", () => renderizarAnalises(ultimasAnalises));
+    adicionarEvento("filtroAnalista", "change", () => renderizarAnalises(ultimasAnalises, analistasAtuais));
     adicionarEvento("abaAnalises", "click", () => alternarAba("analises"));
     adicionarEvento("abaNotificacoes", "click", async () => {
         alternarAba("notificacoes");
@@ -124,4 +385,35 @@ export async function iniciarPopup() {
         () => sincronizarNotificacoesEmSegundoPlano(estado, mostrarMensagem));
     adicionarEvento("filtroStatusNotificacoes", "change",
         () => renderizarNotificacoes(estado.gruposNotificacoes, estado));
+    adicionarEvento("btnAdicionarAnalista", "click", adicionarAnalista);
+    const inputAnalista = document.getElementById("inputNovoAnalista");
+    if (inputAnalista) {
+        inputAnalista.addEventListener("keydown", (event) => {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                adicionarAnalista();
+            }
+        });
+    }
+    // Eventos de senha
+    adicionarEvento("btnConfig", "click", abrirConfig);
+    adicionarEvento("btnConfirmarSenha", "click", confirmarSenha);
+    adicionarEvento("btnCancelarSenha", "click", fecharModalSenha);
+    adicionarEvento("linkEsqueciSenha", "click", mostrarModalRecuperacao);
+    adicionarEvento("btnSalvarNovaSenha", "click", salvarNovaSenha);
+    adicionarEvento("btnCancelarCriarSenha", "click", fecharModalCriarSenha);
+    adicionarEvento("btnConfirmarRecuperacao", "click", confirmarRecuperacao);
+    adicionarEvento("btnCancelarRecuperacao", "click", fecharModalRecuperacao);
+    const inputSenha = document.getElementById("inputSenha");
+    if (inputSenha) {
+        inputSenha.addEventListener("keydown", (event) => {
+            if (event.key === "Enter") { event.preventDefault(); confirmarSenha(); }
+        });
+    }
+    const inputRespostaRec = document.getElementById("inputRespostaRecuperacaoModal");
+    if (inputRespostaRec) {
+        inputRespostaRec.addEventListener("keydown", (event) => {
+            if (event.key === "Enter") { event.preventDefault(); confirmarRecuperacao(); }
+        });
+    }
 }

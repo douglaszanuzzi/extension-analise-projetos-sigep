@@ -10,63 +10,33 @@
     <link rel="stylesheet" href="popup.css">
 
 </head>
-
 <body>
 
     <header class="topo">
-
-        <div>
-
-            <h1>Analises Pendentes</h1>
-
-            <p>Distribuicao automatica por responsavel</p>
-
+        <div class="topoConteudo">
+            <h1>Habitese Robot</h1>
+            <p>Distribuição de Análises SIGEP</p>
         </div>
-
+        <button id="btnConfig" class="btnConfig" title="Configurações">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4f5b6d" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round">
+                <circle cx="12" cy="12" r="3" />
+                <path
+                    d="M12 1v6m0 10v6m11-11h-6M7 12H1m16.5-7.5l-4.24 4.24M10.74 13.26L6.5 17.5m11 0l-4.24-4.24M10.74 10.74L6.5 6.5" />
+            </svg>
+        </button>
     </header>
 
     <section id="resumo" class="resumo" aria-live="polite">
-
         <div class="resumoItem">
-
-            <span>Pendentes</span>
-
+            <span>Total Pendentes</span>
             <strong id="totalPendentes">0</strong>
-
         </div>
-
-        <div class="resumoItem resumoDouglas">
-
-            <span>Douglas</span>
-
-            <strong id="totalDouglas">0</strong>
-
-        </div>
-
-        <div class="resumoItem resumoGabriel">
-
-            <span>Gabriel</span>
-
-            <strong id="totalGabriel">0</strong>
-
-        </div>
-
     </section>
 
     <nav class="abas" aria-label="Abas da extensão">
-
-        <button id="abaAnalises" type="button" class="aba ativa">
-
-            Análises
-
-        </button>
-
-        <button id="abaNotificacoes" type="button" class="aba">
-
-            Notificações
-
-        </button>
-
+        <button id="abaAnalises" type="button" class="aba ativa">Análises</button>
+        <button id="abaNotificacoes" type="button" class="aba">Notificações</button>
     </nav>
 
     <section id="viewAnalises" class="viewPainel visivel">
@@ -84,27 +54,12 @@
                 Analista
 
             </label>
-
             <select id="filtroAnalista">
-
                 <option value="">Todos</option>
-
-                <option value="Douglas">Douglas</option>
-
-                <option value="Gabriel">Gabriel</option>
-
             </select>
 
         </section>
-
-        <section class="legenda" aria-label="Legenda de responsaveis">
-
-        <span><i class="marcador marcadorDouglas"></i>Douglas</span>
-
-        <span><i class="marcador marcadorGabriel"></i>Gabriel</span>
-
-    </section>
-
+        <div class="legenda" aria-label="Legenda de responsaveis"></div>
         <p id="mensagem" class="mensagem visivel">
 
             Clique em Atualizar para carregar as analises.
@@ -146,53 +101,81 @@
     </section>
 
     <section id="viewNotificacoes" class="viewPainel oculto">
-
         <section class="controles controlesNotificacoes">
-
-            <button id="btnBuscarNotificacoes" type="button">
-
-                Buscar Notificacoes
-
-            </button>
-
+            <button id="btnBuscarNotificacoes" type="button">Buscar Notificacoes</button>
             <div class="indicadorSincronizacao">
-
                 <span id="contadorNovosNotificacoes">🔔 0 novos grupos</span>
-
             </div>
-
             <div class="ultimaAtualizacao">
-
                 <span id="ultimaAtualizacaoTexto">Última atualização</span>
-
             </div>
-
-            <label for="filtroStatusNotificacoes">
-
-                Status
-
-            </label>
-
+            <label for="filtroStatusNotificacoes">Status</label>
             <select id="filtroStatusNotificacoes">
-
                 <option value="ALL">Todos</option>
                 <option value="NEW">Novos</option>
                 <option value="PENDING">Aguardando</option>
                 <option value="DONE">Concluídos</option>
                 <option value="ARCHIVED">Arquivados</option>
-
             </select>
-
         </section>
-
-        <div id="listaGruposNotificacoes" class="listaGruposNotificacoes">
-
-        </div>
-
+        <div id="listaGruposNotificacoes" class="listaGruposNotificacoes"></div>
     </section>
-
+    <section id="viewConfiguracoes" class="viewPainel oculto">
+        <h2 style="font-size:16px;margin:0 0 10px;">Analistas</h2>
+        <p style="font-size:12px;color:#5d6878;margin:0 0 10px;">
+            Adicione ou remova analistas da distribuição automática.
+        </p>
+        <div style="display:flex;gap:6px;margin-bottom:10px;">
+            <input type="text" id="inputNovoAnalista" placeholder="Nome do analista"
+                style="flex:1;min-height:36px;padding:0 8px;border:1px solid #b8c3d1;border-radius:6px;font-size:13px;">
+            <button id="btnAdicionarAnalista" type="button" style="width:auto;padding:0 12px;">Adicionar</button>
+        </div>
+        <p id="mensagemConfiguracoes" class="mensagem"></p>
+        <div id="listaAnalistas" style="display:flex;flex-direction:column;gap:6px;"></div>
+    </section>
     <script type="module" src="popup.js"></script>
+<div id="modalSenha" class="modal-overlay oculto">
+    <div class="modal-content">
+        <h3 id="tituloModalSenha">Acesso Restrito</h3>
+        <p class="modal-desc" id="descModalSenha">Digite a senha para acessar as configurações.</p>
+        <input type="password" id="inputSenha" placeholder="Senha">
+        <p id="erroSenha" class="modal-erro oculto"></p>
+        <div class="modal-botoes">
+            <button id="btnCancelarSenha" type="button" class="btnSecundario">Cancelar</button>
+            <button id="btnConfirmarSenha" type="button">Confirmar</button>
+        </div>
+        <a id="linkEsqueciSenha" class="link-esqueci">Esqueci a senha</a>
+    </div>
+</div>
 
+<div id="modalCriarSenha" class="modal-overlay oculto">
+    <div class="modal-content">
+        <h3>Configurar Acesso</h3>
+        <p class="modal-desc">Crie uma senha para proteger as configurações.</p>
+        <input type="password" id="inputNovaSenha" placeholder="Nova senha">
+        <input type="password" id="inputConfirmarNovaSenha" placeholder="Confirmar senha">
+        <input type="text" id="inputPerguntaRecuperacao" placeholder="Pergunta de segurança (ex: Nome do seu pet?)">
+        <input type="text" id="inputRespostaRecuperacao" placeholder="Resposta de segurança">
+        <p id="erroCriarSenha" class="modal-erro oculto"></p>
+        <div class="modal-botoes">
+            <button id="btnCancelarCriarSenha" type="button" class="btnSecundario">Cancelar</button>
+            <button id="btnSalvarNovaSenha" type="button">Salvar</button>
+        </div>
+    </div>
+</div>
+
+<div id="modalRecuperacao" class="modal-overlay oculto">
+    <div class="modal-content">
+        <h3>Recuperação de Senha</h3>
+        <p class="modal-desc" id="perguntaRecuperacaoTexto"></p>
+        <input type="text" id="inputRespostaRecuperacaoModal" placeholder="Resposta">
+        <p id="erroRecuperacao" class="modal-erro oculto"></p>
+        <div class="modal-botoes">
+            <button id="btnCancelarRecuperacao" type="button" class="btnSecundario">Cancelar</button>
+            <button id="btnConfirmarRecuperacao" type="button">Recuperar</button>
+        </div>
+    </div>
+</div>
 </body>
 
 </html>
