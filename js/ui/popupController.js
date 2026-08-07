@@ -220,13 +220,13 @@ function mostrarErroConfig(mensagem) {
 }
 
 // ==========================================
-// Sistema de Senha
+// Sistema de Senha — CORRIGIDO
 // ==========================================
 
 async function abrirConfig() {
     try {
         const dados = await chrome.storage.local.get("configSenha");
-        if (!dados.configSenha) {
+        if (!dados.configSenha || dados.configSenha === "") {
             mostrarModalCriarSenha();
         } else {
             mostrarModalSenha();
@@ -258,16 +258,22 @@ async function confirmarSenha() {
     const input = document.getElementById("inputSenha");
     const erro = document.getElementById("erroSenha");
     if (!input || !erro) return;
-    const senha = input.value;
-    const dados = await chrome.storage.local.get("configSenha");
-    if (senha === dados.configSenha) {
-        fecharModalSenha();
-        mostrarConfiguracoes();
-    } else {
-        erro.textContent = "Senha incorreta.";
+    const senha = input.value.trim();
+    try {
+        const dados = await chrome.storage.local.get("configSenha");
+        if (dados.configSenha && senha === dados.configSenha) {
+            fecharModalSenha();
+            mostrarConfiguracoes();
+        } else {
+            erro.textContent = "Senha incorreta.";
+            erro.classList.remove("oculto");
+            input.value = "";
+            input.focus();
+        }
+    } catch (erroCatch) {
+        Logger.error("Falha ao confirmar senha.", erroCatch);
+        erro.textContent = "Erro ao verificar senha. Tente novamente.";
         erro.classList.remove("oculto");
-        input.value = "";
-        input.focus();
     }
 }
 
@@ -290,10 +296,10 @@ function fecharModalCriarSenha() {
 }
 
 async function salvarNovaSenha() {
-    const senha = document.getElementById("inputNovaSenha")?.value || "";
-    const confirmar = document.getElementById("inputConfirmarNovaSenha")?.value || "";
-    const pergunta = document.getElementById("inputPerguntaRecuperacao")?.value || "";
-    const resposta = document.getElementById("inputRespostaRecuperacao")?.value || "";
+    const senha = document.getElementById("inputNovaSenha")?.value.trim() || "";
+    const confirmar = document.getElementById("inputConfirmarNovaSenha")?.value.trim() || "";
+    const pergunta = document.getElementById("inputPerguntaRecuperacao")?.value.trim() || "";
+    const resposta = document.getElementById("inputRespostaRecuperacao")?.value.trim() || "";
     const erro = document.getElementById("erroCriarSenha");
     if (!erro) return;
 
@@ -307,20 +313,26 @@ async function salvarNovaSenha() {
         erro.classList.remove("oculto");
         return;
     }
-    if (!pergunta.trim() || !resposta.trim()) {
+    if (!pergunta || !resposta) {
         erro.textContent = "Pergunta e resposta de seguranca sao obrigatorias.";
         erro.classList.remove("oculto");
         return;
     }
 
-    await chrome.storage.local.set({
-        configSenha: senha,
-        perguntaRecuperacao: pergunta.trim(),
-        respostaRecuperacao: resposta.toLowerCase().trim()
-    });
-
-    fecharModalCriarSenha();
-    mostrarConfiguracoes();
+    try {
+        // CRÍTICO: await garante que o salvamento completa antes de continuar
+        await chrome.storage.local.set({
+            configSenha: senha,
+            perguntaRecuperacao: pergunta,
+            respostaRecuperacao: resposta.toLowerCase()
+        });
+        fecharModalCriarSenha();
+        mostrarConfiguracoes();
+    } catch (erroSave) {
+        Logger.error("Falha ao salvar senha.", erroSave);
+        erro.textContent = "Erro ao salvar. Tente novamente.";
+        erro.classList.remove("oculto");
+    }
 }
 
 async function mostrarModalRecuperacao() {
@@ -331,11 +343,16 @@ async function mostrarModalRecuperacao() {
     const input = document.getElementById("inputRespostaRecuperacaoModal");
     if (!modal || !perguntaEl) return;
 
-    const dados = await chrome.storage.local.get("perguntaRecuperacao");
-    if (!dados.perguntaRecuperacao) {
-        perguntaEl.textContent = "Nenhuma pergunta de seguranca configurada. Contate o administrador.";
-    } else {
-        perguntaEl.textContent = dados.perguntaRecuperacao;
+    try {
+        const dados = await chrome.storage.local.get(["perguntaRecuperacao", "respostaRecuperacao"]);
+        if (!dados.perguntaRecuperacao) {
+            perguntaEl.textContent = "Nenhuma pergunta de seguranca configurada. Recrie a senha.";
+        } else {
+            perguntaEl.textContent = dados.perguntaRecuperacao;
+        }
+    } catch (erroLoad) {
+        Logger.error("Falha ao carregar pergunta de recuperacao.", erroLoad);
+        perguntaEl.textContent = "Erro ao carregar pergunta. Tente novamente.";
     }
     if (erro) erro.classList.add("oculto");
     if (input) input.value = "";
@@ -353,17 +370,33 @@ async function confirmarRecuperacao() {
     const erro = document.getElementById("erroRecuperacao");
     if (!erro) return;
 
-    const dados = await chrome.storage.local.get("respostaRecuperacao");
-    if (resposta && resposta === dados.respostaRecuperacao) {
-        await chrome.storage.local.set({ configSenha: "habitese" });
-        fecharModalRecuperacao();
-        mostrarModalSenha("Senha redefinida para 'habitese'. Faca login e altere nas configuracoes.");
-    } else {
-        erro.textContent = "Resposta incorreta.";
+    try {
+        const dados = await chrome.storage.local.get(["respostaRecuperacao", "configSenha"]);
+
+        if (!dados.respostaRecuperacao) {
+            erro.textContent = "Nenhuma resposta de seguranca encontrada. Recrie a senha.";
+            erro.classList.remove("oculto");
+            return;
+        }
+
+        if (resposta && resposta === dados.respostaRecuperacao) {
+            // Resposta correta: limpa a senha atual e abre o modal de criar nova senha
+            await chrome.storage.local.set({ configSenha: "" });
+            fecharModalRecuperacao();
+            mostrarModalCriarSenha();
+        } else {
+            erro.textContent = "Resposta incorreta.";
+            erro.classList.remove("oculto");
+        }
+    } catch (erroRec) {
+        Logger.error("Falha na recuperacao.", erroRec);
+        erro.textContent = "Erro ao verificar resposta. Tente novamente.";
         erro.classList.remove("oculto");
     }
 }
-
+// ==========================================
+// Debug
+// ==========================================
 async function carregarEstadoDebug() {
     try {
         const dados = await chrome.storage.local.get("debugAtivo");

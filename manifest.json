@@ -1,6 +1,6 @@
 {
     "manifest_version": 3,
-    "name": "Robot Monitoramento Analises",
+    "name": "Analysis Control",
     "version": "0.4.0",
     "description": "Ferramenta para inspeção e automação do BSIT.",
     "permissions": [
@@ -19,7 +19,7 @@
         "128": "icons/icon-128.png"
     },
     "action": {
-        "default_title": "Habitese Robot",
+        "default_title": "Analysis Control",
         "default_icon": {
             "128": "icons/icon-128.png"
         }
