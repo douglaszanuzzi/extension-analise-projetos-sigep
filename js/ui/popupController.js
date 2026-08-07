@@ -85,7 +85,7 @@ async function enviarAcao(acao) {
     }
     const resposta = await safeSendMessage(tab, { action: acao });
     if (!resposta) {
-        mostrarMensagem("Nao foi possivel obter resposta da pagina do BSIT.");
+        mostrarMensagem("Nao foi possivel obter resposta da pagina do SIGEP.");
         return;
     }
     if (resposta.erro) {

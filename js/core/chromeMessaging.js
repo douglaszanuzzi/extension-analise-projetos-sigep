@@ -35,7 +35,7 @@ function validarAbaBsit(tab) {
         return "Aba de destino invalida.";
     }
     if (tab.url && !isDominioPermitido(tab.url)) {
-        return "A aba ativa nao pertence ao BSIT.";
+        return "A aba ativa nao pertence ao SIGEP";
     }
     return "";
 }

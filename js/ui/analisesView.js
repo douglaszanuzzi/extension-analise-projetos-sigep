@@ -36,16 +36,16 @@ function mostrarMensagem(mensagem) {
 function traduzirErro(mensagem = "") {
     const texto = String(mensagem || "");
     if (texto.includes("Receiving end does not exist") || texto.includes("Could not establish connection")) {
-        return "Nao foi possivel comunicar com a pagina do BSIT. Verifique se ela esta aberta e tente novamente.";
+        return "Nao foi possivel comunicar com a pagina do SIGEP. Verifique se ela esta aberta e tente novamente.";
     }
     if (texto.includes("Tempo limite aguardando resposta")) {
-        return "A pagina do BSIT demorou para responder. Recarregue a pagina e tente novamente.";
+        return "A pagina do SIGEP demorou para responder. Recarregue a pagina e tente novamente.";
     }
-    if (texto.includes("nao pertence ao BSIT")) {
-        return "Abra uma pagina do BSIT para executar esta acao.";
+    if (texto.includes("nao pertence ao SIGEP")) {
+        return "Abra uma pagina do SIGEP para executar esta acao.";
     }
     if (texto.includes("No tab with id") || texto.includes("Tabs cannot be edited")) {
-        return "A aba do BSIT nao esta mais disponivel. Abra a pagina novamente e tente outra vez.";
+        return "A aba do SIGEP nao esta mais disponivel. Abra a pagina novamente e tente outra vez.";
     }
     if (texto.includes("Tabela principal")) {
         return "Tabela de analises nao encontrada. Abra a tela da fila de analises de Obras do SIGEP.";

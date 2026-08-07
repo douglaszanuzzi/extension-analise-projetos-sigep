@@ -40,6 +40,7 @@
             ],
             "js": [
                 "js/core/storage.js",
+                "js/core/apiClient.js",
                 "js/core/distribution.js",
                 "js/bsit/inspector.js",
                 "js/bsit/notificacoes.js",
