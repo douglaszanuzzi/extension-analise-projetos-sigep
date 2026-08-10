@@ -67,6 +67,7 @@ function mostrarConfiguracoes() {
 
 async function enviarAcao(acao) {
     Logger.info("ACAO ENVIADA:", acao);
+    mostrarLoading("Buscando analises...");
     let tab = null;
     try {
         [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -74,6 +75,8 @@ async function enviarAcao(acao) {
         Logger.error("Falha ao localizar aba ativa.", erro);
         mostrarMensagem("Nao foi possivel localizar a aba ativa.");
         return;
+    } finally {
+        esconderLoading();
     }
     if (!tab) {
         mostrarMensagem("Nenhuma aba ativa encontrada.");
@@ -83,7 +86,19 @@ async function enviarAcao(acao) {
         mostrarMensagem("Nao foi possivel comunicar com a aba ativa.");
         return;
     }
-    const resposta = await safeSendMessage(tab, { action: acao });
+
+    mostrarLoading("Sincronizando distribuicao...");
+    let resposta;
+    try {
+        resposta = await safeSendMessage(tab, { action: acao });
+    } catch (erro) {
+        Logger.error("Falha ao enviar acao.", erro);
+        mostrarMensagem("Erro ao comunicar com a pagina do SIGEP.");
+        return;
+    } finally {
+        esconderLoading();
+    }
+
     if (!resposta) {
         mostrarMensagem("Nao foi possivel obter resposta da pagina do SIGEP.");
         return;
@@ -92,7 +107,24 @@ async function enviarAcao(acao) {
         mostrarMensagem(traduzirErro(resposta.erro));
         return;
     }
-    const analises = Array.isArray(resposta.analises) ? resposta.analises : [];
+
+    let analises = Array.isArray(resposta.analises) ? resposta.analises : [];
+
+    // Sincronizar com a planilha (servidor central) e aplicar distribuicao
+    if (acao === "analisarTabela" && analises.length > 0) {
+        mostrarLoading("Distribuindo processos...");
+        try {
+            const Distribution = globalThis.HabiteseApp.Distribution;
+            if (Distribution && typeof Distribution.distribuir === "function") {
+                analises = await Distribution.distribuir(analises);
+            }
+        } catch (erro) {
+            Logger.error("Falha na distribuicao.", erro);
+        } finally {
+            esconderLoading();
+        }
+    }
+
     const totaisPorResponsavel = contarPorResponsavel(analises);
     atualizarDashboard(totaisPorResponsavel, resposta.resumo?.semAnalise);
     ultimasAnalises = analises;
@@ -533,7 +565,20 @@ async function limparHistorico() {
         mostrarErroConfig("Não foi possível limpar o histórico.");
     }
 }
+// ==========================================
+// loading
+// ==========================================
+function mostrarLoading(texto = "Buscando analises...") {
+    const overlay = document.getElementById("loadingOverlay");
+    const textoEl = overlay?.querySelector(".loading-texto");
+    if (textoEl) textoEl.textContent = texto;
+    if (overlay) overlay.classList.remove("oculto");
+}
 
+function esconderLoading() {
+    const overlay = document.getElementById("loadingOverlay");
+    if (overlay) overlay.classList.add("oculto");
+}
 // ==========================================
 // Inicializacao
 // ==========================================

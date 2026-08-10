@@ -127,96 +127,84 @@ globalThis.HabiteseApp.Distribution = {
         const execInfo = { id: execId, inicio, quantidadeProcessos: processos.length, ultimoAnalistaCarregado: null, ultimoAnalistaSalvo: null };
 
         const promise = (async () => {
-    const ApiClient = globalThis.HabiteseApp.ApiClient;
-    const Storage = globalThis.HabiteseApp.Storage;
+            const ApiClient = globalThis.HabiteseApp.ApiClient;
+            const Storage = globalThis.HabiteseApp.Storage;
 
-    // 1. Carregar distribuicao local (cache offline)
-    const dadosLocal = await Storage.carregar();
+            // 1. Sincronizar com a planilha (servidor central)
+            //    Nao enviamos o cache local — a planilha é a fonte de verdade
+            const resultado = await ApiClient.sincronizar(
+                {},
+                null,
+                processos,
+                this.ANALISTAS
+            );
 
-    // 2. Sincronizar com a planilha (servidor central)
-    const resultado = await ApiClient.sincronizar(
-        dadosLocal.distribuicao,
-        dadosLocal.ultimoAnalista,
-        processos,
-        this.ANALISTAS
-    );
+            let distribuicao;
+            let ultimoAnalista;
+            let novasAtribuicoes = [];
 
-    // 3. Se a API retornou dados, usar a versão do servidor
-    let distribuicao;
-    let ultimoAnalista;
-    let novasAtribuicoes = [];
+            if (!resultado.erro && resultado.distribuicao) {
+                distribuicao = resultado.distribuicao;
+                ultimoAnalista = resultado.ultimoAnalista;
+            } else {
+                // Fallback offline: usar cache local
+                const dadosLocal = await Storage.carregar();
+                distribuicao = dadosLocal.distribuicao || {};
+                ultimoAnalista = dadosLocal.ultimoAnalista || null;
+                await distributionWarn("[Distribution] API indisponivel, usando cache local.");
+            }
 
-    if (!resultado.erro && resultado.distribuicao) {
-        distribuicao = resultado.distribuicao;
-        ultimoAnalista = resultado.ultimoAnalista;
-    } else {
-        // Fallback offline: usar distribuição local
-        distribuicao = dadosLocal.distribuicao;
-        ultimoAnalista = dadosLocal.ultimoAnalista;
-        await distributionWarn("[Distribution] API indisponivel, usando cache local.");
-    }
+            // 2. Limpar atribuicoes de analistas removidos
+            const analistasValidos = new Set(this.ANALISTAS);
+            Object.keys(distribuicao).forEach(id => {
+                if (!analistasValidos.has(distribuicao[id])) {
+                    delete distribuicao[id];
+                }
+            });
 
-    // 4. Limpar atribuicoes de analistas removidos
-    const analistasValidos = new Set(this.ANALISTAS);
-    Object.keys(distribuicao).forEach(id => {
-        if (!analistasValidos.has(distribuicao[id])) {
-            delete distribuicao[id];
-        }
-    });
+            // 3. Atribuir responsavel aos processos
+            for (const processo of processos) {
+                const id = processo.buildingConstructionId;
+                if (!id) {
+                    processo.responsavel = "";
+                    continue;
+                }
+                if (distribuicao[id]) {
+                    processo.responsavel = distribuicao[id];
+                    continue;
+                }
+                // Fallback local (so chega aqui se a API falhou)
+                const cargaAtual = this.calcularCargaAtual(processos, distribuicao);
+                const escolha = this.escolherAnalistaPorCarga(cargaAtual, ultimoAnalista);
+                processo.responsavel = escolha.analista;
+                distribuicao[id] = escolha.analista;
+                ultimoAnalista = escolha.analista;
 
-    // 5. Atribuir responsavel aos processos
-    for (const processo of processos) {
-        const id = processo.buildingConstructionId;
-        if (!id) {
-            processo.responsavel = "";
-            continue;
-        }
-        if (distribuicao[id]) {
-            processo.responsavel = distribuicao[id];
-            continue;
-        }
-        // Se chegou aqui, o processo nao foi distribuido nem pelo servidor nem localmente
-        // (nao deveria acontecer se a sincronizacao funcionou, mas por segurança:)
-        const cargaAtual = this.calcularCargaAtual(processos, distribuicao);
-        const escolha = this.escolherAnalistaPorCarga(cargaAtual, ultimoAnalista);
-        processo.responsavel = escolha.analista;
-        distribuicao[id] = escolha.analista;
-        ultimoAnalista = escolha.analista;
+                novasAtribuicoes.push({
+                    data: new Date().toISOString(),
+                    analista: escolha.analista,
+                    buildingConstructionId: processo.buildingConstructionId || "",
+                    proprietario: processo.proprietario || "",
+                    area: processo.area || "",
+                    usoImovel: processo.usoImovel || "",
+                    tipo: processo.tipo || ""
+                });
+            }
 
-        novasAtribuicoes.push({
-            data: new Date().toISOString(),
-            analista: escolha.analista,
-            buildingConstructionId: processo.buildingConstructionId || "",
-            proprietario: processo.proprietario || "",
-            area: processo.area || "",
-            usoImovel: processo.usoImovel || "",
-            tipo: processo.tipo || ""
-        });
-    }
+            // 4. Atualizar cache local (para funcionar offline)
+            const dadosLocal = await Storage.carregar();
+            dadosLocal.distribuicao = distribuicao;
+            dadosLocal.ultimoAnalista = ultimoAnalista;
+            await Storage.salvar(dadosLocal);
 
-    // 6. Salvar no cache local (para funcionar offline)
-    dadosLocal.distribuicao = distribuicao;
-    dadosLocal.ultimoAnalista = ultimoAnalista;
-    await Storage.salvar(dadosLocal);
+            // 5. Salvar historico (apenas se houve novas atribuicoes locais)
+            if (novasAtribuicoes.length > 0) {
+                await ApiClient.salvarHistorico(novasAtribuicoes);
+            }
 
-    // 7. Salvar historico na planilha
-    if (novasAtribuicoes.length > 0) {
-        await ApiClient.salvarHistorico(novasAtribuicoes);
-    }
-
-    // 8. Limpar IDs que nao estao mais na lista atual
-    const idsAtuais = new Set(
-        processos.map(p => p.buildingConstructionId).filter(Boolean)
-    );
-    Object.keys(distribuicao).forEach(id => {
-        if (!idsAtuais.has(id)) {
-            delete distribuicao[id];
-        }
-    });
-
-    execInfo.ultimoAnalistaSalvo = ultimoAnalista;
-    return processos;
-})();
+            execInfo.ultimoAnalistaSalvo = ultimoAnalista;
+            return processos;
+        })();
 
         distribuicaoEmAndamento = { id: execId, inicio, promise };
         try {
