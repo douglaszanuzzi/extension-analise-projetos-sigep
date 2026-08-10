@@ -130,28 +130,43 @@ globalThis.HabiteseApp.Distribution = {
             const ApiClient = globalThis.HabiteseApp.ApiClient;
             const Storage = globalThis.HabiteseApp.Storage;
 
+            // DEBUG: verificar se ApiClient está disponível
+            if (!ApiClient) {
+                console.error("[Distribution] ApiClient NAO disponivel! Verifique popup.html");
+            } else {
+                console.log("[Distribution] ApiClient encontrado. Chamando sincronizar...");
+            }
+
             // 1. Sincronizar com a planilha (servidor central)
-            //    Nao enviamos o cache local — a planilha é a fonte de verdade
-            const resultado = await ApiClient.sincronizar(
-                {},
-                null,
-                processos,
-                this.ANALISTAS
-            );
+            let resultado = null;
+            if (ApiClient && ApiClient.sincronizar) {
+                try {
+                    resultado = await ApiClient.sincronizar(
+                        {},
+                        null,
+                        processos,
+                        this.ANALISTAS
+                    );
+                    console.log("[Distribution] Resposta da API:", JSON.stringify(resultado).slice(0, 500));
+                } catch (erro) {
+                    console.error("[Distribution] Erro ao chamar API:", erro);
+                }
+            }
 
             let distribuicao;
             let ultimoAnalista;
             let novasAtribuicoes = [];
 
-            if (!resultado.erro && resultado.distribuicao) {
+            if (resultado && !resultado.erro && resultado.distribuicao) {
                 distribuicao = resultado.distribuicao;
                 ultimoAnalista = resultado.ultimoAnalista;
+                console.log("[Distribution] Usando distribuicao da API. Total:", Object.keys(distribuicao).length);
             } else {
                 // Fallback offline: usar cache local
                 const dadosLocal = await Storage.carregar();
                 distribuicao = dadosLocal.distribuicao || {};
                 ultimoAnalista = dadosLocal.ultimoAnalista || null;
-                await distributionWarn("[Distribution] API indisponivel, usando cache local.");
+                console.warn("[Distribution] API falhou, usando cache local. Total:", Object.keys(distribuicao).length);
             }
 
             // 2. Limpar atribuicoes de analistas removidos
@@ -191,14 +206,14 @@ globalThis.HabiteseApp.Distribution = {
                 });
             }
 
-            // 4. Atualizar cache local (para funcionar offline)
+            // 4. Atualizar cache local
             const dadosLocal = await Storage.carregar();
             dadosLocal.distribuicao = distribuicao;
             dadosLocal.ultimoAnalista = ultimoAnalista;
             await Storage.salvar(dadosLocal);
 
-            // 5. Salvar historico (apenas se houve novas atribuicoes locais)
-            if (novasAtribuicoes.length > 0) {
+            // 5. Salvar historico
+            if (novasAtribuicoes.length > 0 && ApiClient) {
                 await ApiClient.salvarHistorico(novasAtribuicoes);
             }
 
