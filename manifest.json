@@ -14,7 +14,10 @@
     ],
     "host_permissions": [
         "http://jatai.bsit-br.com.br/*",
-         "https://jatai.sigep.com.br/*"
+        "https://jatai.sigep.com.br/*",
+        "http://jatai.bsit-br.com.br/*",
+        "https://jatai.sigep.com.br/*",
+        "https://script.google.com/*"
     ],
     "icons": {
         "128": "icons/icon-128.png"
