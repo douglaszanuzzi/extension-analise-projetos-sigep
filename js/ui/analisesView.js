@@ -110,36 +110,29 @@ function renderizarAnalises(analises, analistas = []) {
                 mostrarMensagem("Nao foi possivel abrir a analise.");
             }
         });
-        tdAcao.appendChild(botaoAbrir);
-
-        // Botao Arquivar (novo)
-        const botaoArquivar = document.createElement("button");
-        botaoArquivar.type = "button";
-        botaoArquivar.className = "btnArquivar";
-        botaoArquivar.textContent = "Arquivar";
-        botaoArquivar.addEventListener("click", async () => {
-            const id = item.buildingConstructionId;
-            if (!id) return;
-            botaoArquivar.disabled = true;
-            botaoArquivar.textContent = "...";
+              
+        const tdAcao = document.createElement("td");
+        const botaoAbrir = document.createElement("button");
+        botaoAbrir.type = "button";
+        botaoAbrir.className = "btnAbrirObra";
+        botaoAbrir.textContent = "Acessar";
+        botaoAbrir.disabled = !item.urlObra;
+        botaoAbrir.addEventListener("click", () => {
+            if (!item.urlObra) return;
             try {
-                const ApiClient = globalThis.HabiteseApp?.ApiClient;
-                if (ApiClient && ApiClient.arquivarProcesso) {
-                    await ApiClient.arquivarProcesso(id);
+                const resultado = chrome.tabs.create({ url: item.urlObra });
+                if (resultado?.catch) {
+                    resultado.catch(erro => {
+                        Logger.error("Falha ao abrir obra.", erro);
+                        mostrarMensagem("Nao foi possivel abrir a analise.");
+                    });
                 }
-                // Avisa o popupController para atualizar a lista
-                document.dispatchEvent(new CustomEvent("analise-arquivada", {
-                    detail: { buildingConstructionId: id }
-                }));
             } catch (erro) {
-                Logger.error("Falha ao arquivar.", erro);
-                mostrarMensagem("Nao foi possivel arquivar.");
-                botaoArquivar.disabled = false;
-                botaoArquivar.textContent = "Arquivar";
+                Logger.error("Falha ao abrir obra.", erro);
+                mostrarMensagem("Nao foi possivel abrir a analise.");
             }
         });
-        tdAcao.appendChild(botaoArquivar);
-
+        tdAcao.appendChild(botaoAbrir);
         tr.appendChild(tdAcao);
         tbody.appendChild(tr);
     });

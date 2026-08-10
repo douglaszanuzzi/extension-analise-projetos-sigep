@@ -589,24 +589,9 @@ export async function iniciarPopup() {
     iniciarSincronizacaoAutomaticaLocal();
     await carregarAnalistas();
 
-    // Listener para quando uma analise e arquivada (comunicacao com analisesView.js)
-    document.addEventListener("analise-arquivada", (evento) => {
-        const id = evento.detail?.buildingConstructionId;
-        if (!id) return;
-        ultimasAnalises = ultimasAnalises.filter(
-            a => a.buildingConstructionId !== id
-        );
-        const totais = contarPorResponsavel(ultimasAnalises);
-        atualizarDashboard(totais);
-        renderizarAnalises(ultimasAnalises, analistasAtuais);
-    });
-
-    // Eventos principais — Análises
     adicionarEvento("btnTabela", "click", () => enviarAcao("analisarTabela"));
     adicionarEvento("filtroAnalista", "change", () => renderizarAnalises(ultimasAnalises, analistasAtuais));
     adicionarEvento("abaAnalises", "click", () => alternarAba("analises"));
-
-    // Eventos — Notificações
     adicionarEvento("abaNotificacoes", "click", async () => {
         alternarAba("notificacoes");
         if (!notificacoesCarregadas) {
@@ -616,8 +601,6 @@ export async function iniciarPopup() {
     });
     adicionarEvento("btnBuscarNotificacoes", "click", sincronizarNotificacoesEmSegundoPlano);
     adicionarEvento("filtroStatusNotificacoes", "change", () => renderizarNotificacoes(estado.gruposNotificacoes));
-
-    // Eventos — Configurações (senha)
     adicionarEvento("btnConfig", "click", abrirConfig);
     adicionarEvento("btnConfirmarSenha", "click", confirmarSenha);
     adicionarEvento("btnFecharModalSenha", "click", fecharModalSenha);
@@ -626,19 +609,11 @@ export async function iniciarPopup() {
     adicionarEvento("btnFecharModalRecuperacao", "click", fecharModalRecuperacao);
     adicionarEvento("btnSalvarNovaSenha", "click", salvarNovaSenha);
     adicionarEvento("btnFecharModalCriarSenha", "click", fecharModalCriarSenha);
-
-    // Eventos — Gestão de analistas
     adicionarEvento("btnAdicionarAnalista", "click", adicionarAnalista);
     adicionarEvento("inputNovoAnalista", "keydown", (e) => {
-        if (e.key === "Enter") {
-            adicionarAnalista();
-        }
+        if (e.key === "Enter") adicionarAnalista();
     });
-
-    // Eventos — Debug
     adicionarEvento("toggleDebug", "change", alternarDebug);
-
-    // Eventos — Histórico de distribuição
     adicionarEvento("btnExportarHistorico", "click", exportarHistoricoCSV);
     adicionarEvento("btnLimparHistorico", "click", limparHistorico);
 }

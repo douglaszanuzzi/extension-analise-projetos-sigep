@@ -45,13 +45,9 @@ globalThis.HabiteseApp.Distribution = {
     },
 
     proximoAnalista(ultimo) {
-        if (!ultimo) {
-            return this.ANALISTAS[0];
-        }
+        if (!ultimo) return this.ANALISTAS[0];
         const indice = this.ANALISTAS.indexOf(ultimo);
-        if (indice === -1) {
-            return this.ANALISTAS[0];
-        }
+        if (indice === -1) return this.ANALISTAS[0];
         return this.ANALISTAS[(indice + 1) % this.ANALISTAS.length];
     },
 
@@ -79,19 +75,17 @@ globalThis.HabiteseApp.Distribution = {
         let atual = ultimo;
         for (let i = 0; i < this.ANALISTAS.length; i++) {
             atual = this.proximoAnalista(atual);
-            if (candidatosSet.has(atual)) {
-                return atual;
-            }
+            if (candidatosSet.has(atual)) return atual;
         }
         return candidatos[0];
     },
 
     escolherAnalistaPorCarga(cargaAtual, ultimoAnalista) {
         const menorCarga = Math.min(
-            ...this.ANALISTAS.map(analista => cargaAtual[analista] || 0)
+            ...this.ANALISTAS.map(a => cargaAtual[a] || 0)
         );
         const candidatos = this.ANALISTAS.filter(
-            analista => (cargaAtual[analista] || 0) === menorCarga
+            a => (cargaAtual[a] || 0) === menorCarga
         );
         if (candidatos.length === 1) {
             return { analista: candidatos[0], motivo: "Menor carga", candidatos, menorCarga };
@@ -145,6 +139,8 @@ globalThis.HabiteseApp.Distribution = {
                 } catch (erro) {
                     console.error("[Distribution] Erro ao chamar API:", erro);
                 }
+            } else {
+                console.error("[Distribution] ApiClient NAO disponivel!");
             }
 
             let distribuicao;
@@ -181,6 +177,7 @@ globalThis.HabiteseApp.Distribution = {
                     processo.responsavel = distribuicao[id];
                     continue;
                 }
+                // Fallback local (so chega aqui se a API falhou)
                 const cargaAtual = this.calcularCargaAtual(processos, distribuicao);
                 const escolha = this.escolherAnalistaPorCarga(cargaAtual, ultimoAnalista);
                 processo.responsavel = escolha.analista;
@@ -197,12 +194,7 @@ globalThis.HabiteseApp.Distribution = {
                     tipo: processo.tipo || ""
                 });
             }
-                // 3.5 - Filtrar processos arquivados da exibicao
-            if (resultado && resultado.distribuicao) {
-                // Buscar status arquivados da planilha
-                // (a API ja retorna apenas ativos por padrao no listar)
-                // Por enquanto, se o processo tem status arquivado, marca-o
-            }
+
             // 4. Atualizar cache local
             const dadosLocal = await Storage.carregar();
             dadosLocal.distribuicao = distribuicao;

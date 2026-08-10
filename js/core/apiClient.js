@@ -67,60 +67,6 @@ globalThis.HabiteseApp.ApiClient = {
         }
     },
 
-    async arquivarProcesso(buildingConstructionId) {
-        try {
-            const resp = await fetch(API_URL, {
-                method: "POST",
-                headers: { "Content-Type": "text/plain;charset=utf-8" },
-                body: JSON.stringify({
-                    acao: "arquivar",
-                    senha: SENHA_API,
-                    buildingConstructionId: buildingConstructionId
-                })
-            });
-            return await resp.json();
-        } catch (erro) {
-            console.error("[ApiClient] Falha ao arquivar processo.", erro);
-            return { erro: erro.message };
-        }
-    },
-
-    async restaurarProcesso(buildingConstructionId) {
-        try {
-            const resp = await fetch(API_URL, {
-                method: "POST",
-                headers: { "Content-Type": "text/plain;charset=utf-8" },
-                body: JSON.stringify({
-                    acao: "restaurar",
-                    senha: SENHA_API,
-                    buildingConstructionId: buildingConstructionId
-                })
-            });
-            return await resp.json();
-        } catch (erro) {
-            console.error("[ApiClient] Falha ao restaurar processo.", erro);
-            return { erro: erro.message };
-        }
-    },
-
-    async removerProcesso(buildingConstructionId) {
-        try {
-            const resp = await fetch(API_URL, {
-                method: "POST",
-                headers: { "Content-Type": "text/plain;charset=utf-8" },
-                body: JSON.stringify({
-                    acao: "remover",
-                    senha: SENHA_API,
-                    buildingConstructionId: buildingConstructionId
-                })
-            });
-            return await resp.json();
-        } catch (erro) {
-            console.error("[ApiClient] Falha ao remover processo.", erro);
-            return { erro: erro.message };
-        }
-    },
-
     async limparTudo() {
         try {
             const resp = await fetch(API_URL, {
