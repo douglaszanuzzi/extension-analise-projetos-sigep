@@ -734,3 +734,22 @@ tbody tr:hover{
         transform: rotate(360deg);
     }
 }
+.btnArquivar {
+    background: #f59e0b;
+    color: white;
+    border: none;
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 11px;
+    white-space: nowrap;
+}
+
+.btnArquivar:hover {
+    background: #d97706;
+}
+
+.btnArquivar:disabled {
+    background: #d1d5db;
+    cursor: wait;
+}

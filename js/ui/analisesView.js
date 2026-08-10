@@ -86,6 +86,10 @@ function renderizarAnalises(analises, analistas = []) {
         }
         tr.appendChild(tdResponsavel);
         const tdAcao = document.createElement("td");
+        tdAcao.style.display = "flex";
+        tdAcao.style.gap = "4px";
+
+        // Botao Acessar (ja existente)
         const botaoAbrir = document.createElement("button");
         botaoAbrir.type = "button";
         botaoAbrir.className = "btnAbrirObra";
@@ -107,6 +111,35 @@ function renderizarAnalises(analises, analistas = []) {
             }
         });
         tdAcao.appendChild(botaoAbrir);
+
+        // Botao Arquivar (novo)
+        const botaoArquivar = document.createElement("button");
+        botaoArquivar.type = "button";
+        botaoArquivar.className = "btnArquivar";
+        botaoArquivar.textContent = "Arquivar";
+        botaoArquivar.addEventListener("click", async () => {
+            const id = item.buildingConstructionId;
+            if (!id) return;
+            botaoArquivar.disabled = true;
+            botaoArquivar.textContent = "...";
+            try {
+                const ApiClient = globalThis.HabiteseApp?.ApiClient;
+                if (ApiClient && ApiClient.arquivarProcesso) {
+                    await ApiClient.arquivarProcesso(id);
+                }
+                // Avisa o popupController para atualizar a lista
+                document.dispatchEvent(new CustomEvent("analise-arquivada", {
+                    detail: { buildingConstructionId: id }
+                }));
+            } catch (erro) {
+                Logger.error("Falha ao arquivar.", erro);
+                mostrarMensagem("Nao foi possivel arquivar.");
+                botaoArquivar.disabled = false;
+                botaoArquivar.textContent = "Arquivar";
+            }
+        });
+        tdAcao.appendChild(botaoArquivar);
+
         tr.appendChild(tdAcao);
         tbody.appendChild(tr);
     });

@@ -130,14 +130,8 @@ globalThis.HabiteseApp.Distribution = {
             const ApiClient = globalThis.HabiteseApp.ApiClient;
             const Storage = globalThis.HabiteseApp.Storage;
 
-            // DEBUG: verificar se ApiClient está disponível
-            if (!ApiClient) {
-                console.error("[Distribution] ApiClient NAO disponivel! Verifique popup.html");
-            } else {
-                console.log("[Distribution] ApiClient encontrado. Chamando sincronizar...");
-            }
-
             // 1. Sincronizar com a planilha (servidor central)
+            //    Nao enviamos o cache local — a planilha é a fonte de verdade
             let resultado = null;
             if (ApiClient && ApiClient.sincronizar) {
                 try {
@@ -162,7 +156,6 @@ globalThis.HabiteseApp.Distribution = {
                 ultimoAnalista = resultado.ultimoAnalista;
                 console.log("[Distribution] Usando distribuicao da API. Total:", Object.keys(distribuicao).length);
             } else {
-                // Fallback offline: usar cache local
                 const dadosLocal = await Storage.carregar();
                 distribuicao = dadosLocal.distribuicao || {};
                 ultimoAnalista = dadosLocal.ultimoAnalista || null;
@@ -188,7 +181,6 @@ globalThis.HabiteseApp.Distribution = {
                     processo.responsavel = distribuicao[id];
                     continue;
                 }
-                // Fallback local (so chega aqui se a API falhou)
                 const cargaAtual = this.calcularCargaAtual(processos, distribuicao);
                 const escolha = this.escolherAnalistaPorCarga(cargaAtual, ultimoAnalista);
                 processo.responsavel = escolha.analista;
@@ -205,7 +197,12 @@ globalThis.HabiteseApp.Distribution = {
                     tipo: processo.tipo || ""
                 });
             }
-
+                // 3.5 - Filtrar processos arquivados da exibicao
+            if (resultado && resultado.distribuicao) {
+                // Buscar status arquivados da planilha
+                // (a API ja retorna apenas ativos por padrao no listar)
+                // Por enquanto, se o processo tem status arquivado, marca-o
+            }
             // 4. Atualizar cache local
             const dadosLocal = await Storage.carregar();
             dadosLocal.distribuicao = distribuicao;
