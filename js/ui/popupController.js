@@ -337,7 +337,7 @@ async function salvarNovaSenha() {
     const erro = document.getElementById("erroCriarSenha");
     if (!erro) return;
 
-    if (!senha || senha.length &lt; 3) {
+    if (!senha || senha.length < 3) {
         erro.textContent = "Senha deve ter pelo menos 3 caracteres.";
         erro.classList.remove("oculto");
         return;
