@@ -77,25 +77,22 @@ export const NotificationService = {
 
     },
 
-    async localizarAbaBsit() {
-
-        try {
-
-            const abas = await chrome.tabs.query({
-                url: "http://jatai.bsit-br.com.br/*"
-            });
-
-            return abas[0] || null;
-
-        } catch (erro) {
-
-            Logger.warn("Falha ao localizar aba do BSIT.", erro);
-
-            return null;
-
-        }
-
-    },
+ async localizarAbaBsit() {
+    try {
+        const abas = await chrome.tabs.query({
+            url: [
+                "http://jatai.bsit-br.com.br/*",
+                "https://jatai.bsit-br.com.br/*",
+                "http://jatai.sigep.com.br/*",
+                "https://jatai.sigep.com.br/*"
+            ]
+        });
+        return abas[0] || null;
+    } catch (erro) {
+        Logger.warn("Falha ao localizar aba do BSIT.", erro);
+        return null;
+    }
+},
 
     async buscarNotificacoesNoBsit() {
 
