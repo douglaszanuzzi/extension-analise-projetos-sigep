@@ -1,15 +1,11 @@
 import { Logger } from "../core/logger.js";
-import { safeSendMessage } from "../core/chromeMessaging.js";
 
 const PALETA_CORES = [
-    { bg: "#cfe5ff", border: "#8bbdf3", text: "#073b6d" },
-    { bg: "#d6f2d8", border: "#91d99a", text: "#15571a" },
-    { bg: "#fef3c7", border: "#fbbf24", text: "#92400e" },
-    { bg: "#fce7f3", border: "#f9a8d4", text: "#9d174d" },
-    { bg: "#ede9fe", border: "#c4b5fd", text: "#5b21b6" },
-    { bg: "#cffafe", border: "#67e8f9", text: "#155e75" },
-    { bg: "#fed7aa", border: "#fb923c", text: "#7c2d12" },
-    { bg: "#e0e7ff", border: "#a5b4fc", text: "#3730a3" }
+    { bg: "#EBF5FB", text: "#1d4f8f", border: "#1d4f8f" },
+    { bg: "#E0F2E0", text: "#0d9488", border: "#0d9488" },
+    { bg: "#FEF3C7", text: "#b45309", border: "#b45309" },
+    { bg: "#FCE7F3", text: "#be185d", border: "#be185d" },
+    { bg: "#EDE9FE", text: "#6d28d9", border: "#6d28d9" }
 ];
 
 function obterCorAnalista(indice) {
@@ -22,32 +18,22 @@ function obterAnalistaSelecionado() {
 }
 
 function mostrarMensagem(mensagem) {
-    const tbody = document.querySelector("#tblAnalises tbody");
-    const elementoMensagem = document.getElementById("mensagem");
-    if (elementoMensagem) {
-        elementoMensagem.textContent = mensagem;
-        elementoMensagem.classList.add("visivel");
-    }
-    if (tbody) {
-        tbody.innerHTML = "";
+    const msg = document.getElementById("mensagem");
+    if (msg) {
+        msg.textContent = mensagem;
+        msg.classList.add("visivel");
     }
 }
 
-function traduzirErro(mensagem = "") {
-    const texto = String(mensagem || "");
-    if (texto.includes("Receiving end does not exist") || texto.includes("Could not establish connection")) {
+function traduzirErro(texto) {
+    if (!texto) return "Erro desconhecido.";
+    if (texto.includes("Nao foi possivel comunicar")) {
         return "Nao foi possivel comunicar com a pagina do SIGEP. Verifique se ela esta aberta e tente novamente.";
     }
     if (texto.includes("Tempo limite aguardando resposta")) {
-        return "A pagina do SIGEP demorou para responder. Recarregue a pagina e tente novamente.";
+        return "Tempo limite aguardando resposta do SIGEP. Tente novamente.";
     }
-    if (texto.includes("nao pertence ao SIGEP")) {
-        return "Abra uma pagina do SIGEP para executar esta acao.";
-    }
-    if (texto.includes("No tab with id") || texto.includes("Tabs cannot be edited")) {
-        return "A aba do SIGEP nao esta mais disponivel. Abra a pagina novamente e tente outra vez.";
-    }
-    if (texto.includes("Tabela principal")) {
+    if (texto.includes("Tabela de analises nao encontrada")) {
         return "Tabela de analises nao encontrada. Abra a tela da fila de analises de Obras do SIGEP.";
     }
     return texto || "Nao foi possivel concluir a acao. Tente novamente.";
@@ -64,6 +50,12 @@ function renderizarAnalises(analises, analistas = []) {
     const filtradas = analistaSelecionado
         ? analises.filter(item => item.responsavel === analistaSelecionado)
         : analises;
+
+    if (filtradas.length === 0) {
+        mostrarMensagem("Nenhuma analise encontrada para esse filtro.");
+        return;
+    }
+
     filtradas.forEach(item => {
         const tr = document.createElement("tr");
         if (item.responsavel) {
@@ -71,11 +63,13 @@ function renderizarAnalises(analises, analistas = []) {
             const cor = obterCorAnalista(indice);
             tr.style.background = cor.bg;
         }
+
         [item.proprietario, item.area, item.usoImovel, item.tipo].forEach(valor => {
             const td = document.createElement("td");
             td.textContent = valor || "";
             tr.appendChild(td);
         });
+
         const tdResponsavel = document.createElement("td");
         tdResponsavel.textContent = item.responsavel || "";
         if (item.responsavel) {
@@ -85,32 +79,8 @@ function renderizarAnalises(analises, analistas = []) {
             tdResponsavel.style.fontWeight = "bold";
         }
         tr.appendChild(tdResponsavel);
-        const tdAcao = document.createElement("td");
-        tdAcao.style.display = "flex";
-        tdAcao.style.gap = "4px";
 
-        // Botao Acessar (ja existente)
-        const botaoAbrir = document.createElement("button");
-        botaoAbrir.type = "button";
-        botaoAbrir.className = "btnAbrirObra";
-        botaoAbrir.textContent = "Acessar";
-        botaoAbrir.disabled = !item.urlObra;
-        botaoAbrir.addEventListener("click", () => {
-            if (!item.urlObra) return;
-            try {
-                const resultado = chrome.tabs.create({ url: item.urlObra });
-                if (resultado?.catch) {
-                    resultado.catch(erro => {
-                        Logger.error("Falha ao abrir obra.", erro);
-                        mostrarMensagem("Nao foi possivel abrir a analise.");
-                    });
-                }
-            } catch (erro) {
-                Logger.error("Falha ao abrir obra.", erro);
-                mostrarMensagem("Nao foi possivel abrir a analise.");
-            }
-        });
-              
+        // Celula de acoes — apenas UMA declaracao de tdAcao e botaoAbrir
         const tdAcao = document.createElement("td");
         const botaoAbrir = document.createElement("button");
         botaoAbrir.type = "button";
