@@ -247,7 +247,7 @@ globalThis.HabiteseApp.NotificationDomService = {
                 return Promise.resolve(true);
             }
         } catch (erro) {
-            notificacoesWarn("[Habitese] Falha ao fechar popup de notificacoes.", erro);
+            notificacoesWarn("Falha ao fechar popup de notificacoes.", erro);
         }
         return Promise.resolve(true);
     }

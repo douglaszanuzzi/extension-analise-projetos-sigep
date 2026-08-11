@@ -80,7 +80,6 @@ function renderizarAnalises(analises, analistas = []) {
         }
         tr.appendChild(tdResponsavel);
 
-        // Celula de acoes — apenas UMA declaracao de tdAcao e botaoAbrir
         const tdAcao = document.createElement("td");
         const botaoAbrir = document.createElement("button");
         botaoAbrir.type = "button";

@@ -594,11 +594,11 @@ export async function iniciarPopup() {
         alternarAba("notificacoes");
         if (!notificacoesCarregadas) {
             notificacoesCarregadas = true;
-            await carregarNotificacoes();
+            await carregarNotificacoes(estado, mostrarMensagem);
         }
     });
-    adicionarEvento("btnBuscarNotificacoes", "click", sincronizarNotificacoesEmSegundoPlano);
-    adicionarEvento("filtroStatusNotificacoes", "change", () => renderizarNotificacoes(estado.gruposNotificacoes));
+    adicionarEvento("btnBuscarNotificacoes", "click", () => sincronizarNotificacoesEmSegundoPlano(estado, mostrarMensagem));
+    adicionarEvento("filtroStatusNotificacoes", "change", () => renderizarNotificacoes(estado.gruposNotificacoes, estado));
     adicionarEvento("btnConfig", "click", abrirConfig);
     adicionarEvento("btnConfirmarSenha", "click", confirmarSenha);
     adicionarEvento("btnFecharModalSenha", "click", fecharModalSenha);
