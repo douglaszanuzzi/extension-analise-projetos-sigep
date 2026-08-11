@@ -32,84 +32,84 @@ globalThis.HabiteseApp.BSITInspector = {
     },
 
     async analisarTabelaPrincipal() {
-        const tabela = document.getElementById("formBuildingAnalisys:buildings");
+    const tabela = document.getElementById("formBuildingAnalisys:buildings");
 
-        if (!tabela) {
-            return { erro: "Tabela principal não encontrada." };
+    if (!tabela) {
+        return { erro: "Tabela principal não encontrada." };
+    }
+
+    const linhas = tabela.querySelectorAll("tbody tr.rich-table-row");
+    const totalLinhasDomNoMomento = linhas.length;
+
+    const menus = document.querySelectorAll('[onclick*="buildingConstruction-id"]');
+
+    const analises = [];
+    let total = 0;
+    let semAnalise = 0;
+    let taxaPagamento = 0;
+    let rejeitados = 0;
+
+    linhas.forEach((linha, indice) => {
+        const td = linha.querySelectorAll("td");
+        if (td.length < 11) return;
+        total++;
+
+        const status = this.textoCelula(td, 7);
+
+        let buildingConstructionId = null;
+        const menu = menus[indice];
+        if (menu) {
+            const onclick = menu.getAttribute("onclick");
+            const match = onclick.match(/buildingConstruction-id=(\d+)/);
+            if (match) buildingConstructionId = match[1];
         }
 
-        const linhas = tabela.querySelectorAll("tbody tr.rich-table-row");
-        const totalLinhasDomNoMomento = linhas.length;
-
-        const menus = document.querySelectorAll('[onclick*="buildingConstruction-id"]');
-
-        const analises = [];
-        let total = 0;
-        let semAnalise = 0;
-        let taxaPagamento = 0;
-        let rejeitados = 0;
-
-        linhas.forEach((linha, indice) => {
-            const td = linha.querySelectorAll("td");
-            if (td.length < 11) return;
-            total++;
-
-            const status = this.textoCelula(td, 7);
-
-            let buildingConstructionId = null;
-            const menu = menus[indice];
-            if (menu) {
-                const onclick = menu.getAttribute("onclick");
-                const match = onclick.match(/buildingConstruction-id=(\d+)/);
-                if (match) buildingConstructionId = match[1];
-            }
-
-            if (status === "Sem Análise") {
-                semAnalise++;
-                analises.push({
-                    buildingConstructionId,
-                    urlObra: buildingConstructionId
-                        ? `${window.location.origin}/manager/tax-management/register/building-construction.jsf?buildingConstruction-id=${buildingConstructionId}`
-                        : "",
-                    proprietario: this.textoCelula(td, 2),
-                    area: this.textoCelula(td, 5),
-                    usoImovel: this.textoCelula(td, 6),
-                    status,
-                    tipo: this.textoCelula(td, 9),
-                    analista: this.textoCelula(td, 10)
-                });
-            } else if (status === "Taxa para Pagamento") {
-                taxaPagamento++;
-            } else if (status === "Rejeitado") {
-                rejeitados++;
-            }
-        });
-
-        inspectorInfo("[DEBUG DISTRIBUICAO] Hipotese 1 - leitura inicial da tabela", {
-            quantidadeLinhasDom: totalLinhasDomNoMomento,
-            quantidadeProcessosLidos: total,
-            quantidadeSemAnalise: semAnalise,
-            quantidadeEnviadaAoDistribution: analises.length,
-            idsEnviadosAoDistribution: analises.map(item => item.buildingConstructionId)
-        });
-
-        window.setTimeout(() => {
-            const tabelaAtualizada = document.getElementById("formBuildingAnalisys:buildings");
-            const linhasDepois = tabelaAtualizada
-                ? tabelaAtualizada.querySelectorAll("tbody tr.rich-table-row")
-                : [];
-            inspectorInfo("[DEBUG DISTRIBUICAO] Hipotese 1 - tabela apos 3 segundos", {
-                quantidadeLinhasDomInicial: totalLinhasDomNoMomento,
-                quantidadeLinhasDomDepois: linhasDepois.length,
-                houveMudancaQuantidadeLinhas: linhasDepois.length !== totalLinhasDomNoMomento
+        if (status === "Sem Análise") {
+            semAnalise++;
+            analises.push({
+                buildingConstructionId,
+                urlObra: buildingConstructionId
+                    ? `${window.location.origin}/manager/tax-management/register/building-construction.jsf?buildingConstruction-id=${buildingConstructionId}`
+                    : "",
+                proprietario: this.textoCelula(td, 2),
+                area: this.textoCelula(td, 5),
+                usoImovel: this.textoCelula(td, 6),
+                status,
+                tipo: this.textoCelula(td, 9),
+                analista: this.textoCelula(td, 10)
             });
-        }, 3000);
+        } else if (status === "Taxa para Pagamento") {
+            taxaPagamento++;
+        } else if (status === "Rejeitado") {
+            rejeitados++;
+        }
+    });
 
-        await globalThis.HabiteseApp.Distribution.distribuir(analises);
+    inspectorInfo("[DEBUG DISTRIBUICAO] Hipotese 1 - leitura inicial da tabela", {
+        quantidadeLinhasDom: totalLinhasDomNoMomento,
+        quantidadeProcessosLidos: total,
+        quantidadeSemAnalise: semAnalise,
+        quantidadeEnviadaAoDistribution: analises.length,
+        idsEnviadosAoDistribution: analises.map(item => item.buildingConstructionId)
+    });
 
-        return { resumo: { total, semAnalise, taxaPagamento, rejeitados }, analises };
-    },
+    window.setTimeout(() => {
+        const tabelaAtualizada = document.getElementById("formBuildingAnalisys:buildings");
+        const linhasDepois = tabelaAtualizada
+            ? tabelaAtualizada.querySelectorAll("tbody tr.rich-table-row")
+            : [];
+        inspectorInfo("[DEBUG DISTRIBUICAO] Hipotese 1 - tabela apos 3 segundos", {
+            quantidadeLinhasDomInicial: totalLinhasDomNoMomento,
+            quantidadeLinhasDomDepois: linhasDepois.length,
+            houveMudancaQuantidadeLinhas: linhasDepois.length !== totalLinhasDomNoMomento
+        });
+    }, 3000);
 
+    // REMOVIDO: await globalThis.HabiteseApp.Distribution.distribuir(analises);
+    // A distribuição agora acontece apenas no popup (popupController.js → enviarAcao)
+
+    return { resumo: { total, semAnalise, taxaPagamento, rejeitados }, analises };
+},
     analisarPrimeiraLinha() {
         const tabela = document.getElementById("formBuildingAnalisys:buildings");
         if (!tabela) return { erro: "Tabela não encontrada." };

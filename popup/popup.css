@@ -694,6 +694,7 @@ tbody tr:hover{
     color: #4f5b6d;
     grid-column: 1 / -1;
 }
+
 .loading-overlay {
     position: fixed;
     top: 0;
@@ -733,23 +734,4 @@ tbody tr:hover{
     to {
         transform: rotate(360deg);
     }
-}
-.btnArquivar {
-    background: #f59e0b;
-    color: white;
-    border: none;
-    padding: 4px 8px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 11px;
-    white-space: nowrap;
-}
-
-.btnArquivar:hover {
-    background: #d97706;
-}
-
-.btnArquivar:disabled {
-    background: #d1d5db;
-    cursor: wait;
 }

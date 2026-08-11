@@ -74,16 +74,17 @@ async function enviarAcao(acao) {
     } catch (erro) {
         Logger.error("Falha ao localizar aba ativa.", erro);
         mostrarMensagem("Nao foi possivel localizar a aba ativa.");
-        return;
-    } finally {
         esconderLoading();
+        return;
     }
     if (!tab) {
         mostrarMensagem("Nenhuma aba ativa encontrada.");
+        esconderLoading();
         return;
     }
     if (typeof tab.id !== "number") {
         mostrarMensagem("Nao foi possivel comunicar com a aba ativa.");
+        esconderLoading();
         return;
     }
 
@@ -94,23 +95,24 @@ async function enviarAcao(acao) {
     } catch (erro) {
         Logger.error("Falha ao enviar acao.", erro);
         mostrarMensagem("Erro ao comunicar com a pagina do SIGEP.");
-        return;
-    } finally {
         esconderLoading();
+        return;
     }
 
     if (!resposta) {
         mostrarMensagem("Nao foi possivel obter resposta da pagina do SIGEP.");
+        esconderLoading();
         return;
     }
     if (resposta.erro) {
         mostrarMensagem(traduzirErro(resposta.erro));
+        esconderLoading();
         return;
     }
 
     let analises = Array.isArray(resposta.analises) ? resposta.analises : [];
 
-    // Sincronizar com a planilha (servidor central) e aplicar distribuicao
+    // Sincronizar com a planilha e aplicar distribuicao
     if (acao === "analisarTabela" && analises.length > 0) {
         mostrarLoading("Distribuindo processos...");
         try {
@@ -120,8 +122,6 @@ async function enviarAcao(acao) {
             }
         } catch (erro) {
             Logger.error("Falha na distribuicao.", erro);
-        } finally {
-            esconderLoading();
         }
     }
 
@@ -129,6 +129,7 @@ async function enviarAcao(acao) {
     atualizarDashboard(totaisPorResponsavel, resposta.resumo?.semAnalise);
     ultimasAnalises = analises;
     renderizarAnalises(ultimasAnalises, analistasAtuais);
+    esconderLoading();
 }
 
 function iniciarSincronizacaoAutomaticaLocal() {
@@ -147,10 +148,9 @@ function adicionarEvento(id, evento, manipulador) {
     elemento.addEventListener(evento, manipulador);
 }
 
-// ==========================================
+// 
 // Gestao de Analistas
-// ==========================================
-
+// 
 async function carregarAnalistas() {
     try {
         const dados = await chrome.storage.local.get("analistas");
@@ -251,10 +251,9 @@ function mostrarErroConfig(mensagem) {
     }
 }
 
-// ==========================================
-// Sistema de Senha — CORRIGIDO
-// ==========================================
-
+// 
+// Sistema de Senha
+// 
 async function abrirConfig() {
     try {
         const dados = await chrome.storage.local.get("configSenha");
@@ -291,20 +290,23 @@ async function confirmarSenha() {
     const erro = document.getElementById("erroSenha");
     if (!input || !erro) return;
     const senha = input.value.trim();
+    if (!senha) {
+        erro.textContent = "Digite a senha.";
+        erro.classList.remove("oculto");
+        return;
+    }
     try {
         const dados = await chrome.storage.local.get("configSenha");
-        if (dados.configSenha && senha === dados.configSenha) {
+        if (senha === dados.configSenha) {
             fecharModalSenha();
             mostrarConfiguracoes();
         } else {
             erro.textContent = "Senha incorreta.";
             erro.classList.remove("oculto");
-            input.value = "";
-            input.focus();
         }
     } catch (erroCatch) {
-        Logger.error("Falha ao confirmar senha.", erroCatch);
-        erro.textContent = "Erro ao verificar senha. Tente novamente.";
+        Logger.error("Falha ao verificar senha.", erroCatch);
+        erro.textContent = "Erro ao verificar senha.";
         erro.classList.remove("oculto");
     }
 }
@@ -335,7 +337,7 @@ async function salvarNovaSenha() {
     const erro = document.getElementById("erroCriarSenha");
     if (!erro) return;
 
-    if (!senha || senha.length < 3) {
+    if (!senha || senha.length &lt; 3) {
         erro.textContent = "Senha deve ter pelo menos 3 caracteres.";
         erro.classList.remove("oculto");
         return;
@@ -352,7 +354,6 @@ async function salvarNovaSenha() {
     }
 
     try {
-        // CRÍTICO: await garante que o salvamento completa antes de continuar
         await chrome.storage.local.set({
             configSenha: senha,
             perguntaRecuperacao: pergunta,
@@ -412,7 +413,6 @@ async function confirmarRecuperacao() {
         }
 
         if (resposta && resposta === dados.respostaRecuperacao) {
-            // Resposta correta: limpa a senha atual e abre o modal de criar nova senha
             await chrome.storage.local.set({ configSenha: "" });
             fecharModalRecuperacao();
             mostrarModalCriarSenha();
@@ -426,9 +426,10 @@ async function confirmarRecuperacao() {
         erro.classList.remove("oculto");
     }
 }
-// ==========================================
+
+// 
 // Debug
-// ==========================================
+// 
 async function carregarEstadoDebug() {
     try {
         const dados = await chrome.storage.local.get("debugAtivo");
@@ -450,25 +451,23 @@ async function alternarDebug() {
         Logger.error("Falha ao salvar estado de debug.", erro);
     }
 }
-// ==========================================
-// Histórico de Distribuição
-// ==========================================
 
+// 
+// Historico de Distribuicao
+// 
 async function carregarHistorico() {
     const container = document.getElementById("listaHistorico");
     const resumo = document.getElementById("resumoHistorico");
     if (!container || !resumo) return;
     try {
         const dados = await chrome.storage.local.get("historicoDistribuicao");
-        const historico = Array.isArray(dados.historicoDistribuicao) 
-            ? dados.historicoDistribuicao 
-            : [];
-        
+        const historico = Array.isArray(dados.historicoDistribuicao) ? dados.historicoDistribuicao : [];
+
         container.innerHTML = "";
         resumo.innerHTML = "";
 
         if (historico.length === 0) {
-            container.innerHTML = '<p style="font-size:12px;color:#687487;">Nenhuma distribuição registrada.</p>';
+            container.innerHTML = '<p style="font-size:12px;color:#687487;">Nenhuma distribuicao registrada.</p>';
             return;
         }
 
@@ -480,7 +479,7 @@ async function carregarHistorico() {
         Object.entries(contagem).forEach(([nome, total]) => {
             const item = document.createElement("div");
             item.className = "resumoHistorico-item";
-            item.innerHTML = `<strong>${total}</strong>${nome}`;
+            item.innerHTML = `<strong>${total}</strong> ${nome}`;
             resumo.appendChild(item);
         });
 
@@ -489,43 +488,41 @@ async function carregarHistorico() {
             const item = document.createElement("div");
             item.className = "historico-item";
             const data = new Date(entry.data);
-            const dataFmt = data.toLocaleDateString("pt-BR") + " " + 
+            const dataFmt = data.toLocaleDateString("pt-BR") + " " +
                 data.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-            
+
             const spanAnalista = document.createElement("span");
             spanAnalista.className = "historico-item-analista";
             spanAnalista.textContent = entry.analista;
-            
+
             const spanData = document.createElement("span");
             spanData.className = "historico-item-data";
             spanData.textContent = dataFmt;
-            
+
             const spanDetalhes = document.createElement("span");
             spanDetalhes.className = "historico-item-detalhes";
             spanDetalhes.textContent = [
-                entry.proprietario || "Sem proprietário",
+                entry.proprietario || "Sem proprietario",
                 entry.area || "",
                 entry.usoImovel || "",
                 entry.tipo || ""
-            ].filter(Boolean).join(" · ");
-            
+            ].filter(Boolean).join(" - ");
+
             item.appendChild(spanAnalista);
             item.appendChild(spanData);
             item.appendChild(spanDetalhes);
             container.appendChild(item);
         });
     } catch (erro) {
-        Logger.error("Falha ao carregar histórico.", erro);
+        Logger.error("Falha ao carregar historico.", erro);
     }
 }
 
 function exportarHistoricoCSV() {
     chrome.storage.local.get("historicoDistribuicao").then(dados => {
-        const historico = Array.isArray(dados.historicoDistribuicao) 
-            ? dados.historicoDistribuicao 
-            : [];
+        const historico = Array.isArray(dados.historicoDistribuicao) ? dados.historicoDistribuicao : [];
         if (historico.length === 0) {
-            mostrarErroConfig("Não há histórico para exportar.");
+            mostrarErroConfig("Nao ha historico para exportar.");
             return;
         }
         const cabecalho = "Data,Analista,Processo,Proprietario,Area,Uso,Tipo\n";
@@ -540,7 +537,7 @@ function exportarHistoricoCSV() {
                 `"${(e.tipo || "").replace(/"/g, '""')}"`
             ].join(",");
         }).join("\n");
-        
+
         const csv = cabecalho + linhas;
         const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8;" });
         const url = URL.createObjectURL(blob);
@@ -550,8 +547,8 @@ function exportarHistoricoCSV() {
         link.click();
         URL.revokeObjectURL(url);
     }).catch(erro => {
-        Logger.error("Falha ao exportar histórico.", erro);
-        mostrarErroConfig("Não foi possível exportar o histórico.");
+        Logger.error("Falha ao exportar historico.", erro);
+        mostrarErroConfig("Nao foi possivel exportar o historico.");
     });
 }
 
@@ -559,15 +556,16 @@ async function limparHistorico() {
     try {
         await chrome.storage.local.set({ historicoDistribuicao: [] });
         await carregarHistorico();
-        mostrarErroConfig("Histórico limpo.");
+        mostrarErroConfig("Historico limpo.");
     } catch (erro) {
-        Logger.error("Falha ao limpar histórico.", erro);
-        mostrarErroConfig("Não foi possível limpar o histórico.");
+        Logger.error("Falha ao limpar historico.", erro);
+        mostrarErroConfig("Nao foi possivel limpar o historico.");
     }
 }
-// ==========================================
-// loading
-// ==========================================
+
+// 
+// Loading
+// 
 function mostrarLoading(texto = "Buscando analises...") {
     const overlay = document.getElementById("loadingOverlay");
     const textoEl = overlay?.querySelector(".loading-texto");
@@ -579,10 +577,10 @@ function esconderLoading() {
     const overlay = document.getElementById("loadingOverlay");
     if (overlay) overlay.classList.add("oculto");
 }
-// ==========================================
-// Inicializacao
-// ==========================================
 
+// 
+// Inicializacao
+// 
 export async function iniciarPopup() {
     Logger.info("Popup iniciado.");
     alternarAba("analises");

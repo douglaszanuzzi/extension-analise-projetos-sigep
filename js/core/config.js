@@ -1,9 +1,4 @@
 export const CONFIG = {
-
-    DEBUG: true,
-
-    API_URL: "http://localhost:8000",
-
+    DEBUG: false,
     CACHE_VERSION: 1
-
 };

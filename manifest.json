@@ -1,8 +1,8 @@
 {
     "manifest_version": 3,
     "name": "Analysis Control",
-    "version": "0.4.0",
-    "description": "Ferramenta para inspeção e automação do BSIT.",
+    "version": "1.1.0",
+    "description": "Ferramenta para inspecao e automacao do SIGEP",
     "permissions": [
         "activeTab",
         "alarms",
@@ -13,8 +13,6 @@
         "tabs"
     ],
     "host_permissions": [
-        "http://jatai.bsit-br.com.br/*",
-        "https://jatai.sigep.com.br/*",
         "http://jatai.bsit-br.com.br/*",
         "https://jatai.sigep.com.br/*",
         "https://script.google.com/*"
@@ -39,7 +37,7 @@
         {
             "matches": [
                 "http://jatai.bsit-br.com.br/*",
-                 "https://jatai.sigep.com.br/*"
+                "https://jatai.sigep.com.br/*"
             ],
             "js": [
                 "js/core/storage.js",

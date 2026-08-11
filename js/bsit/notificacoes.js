@@ -1,4 +1,5 @@
 globalThis.HabiteseApp.NotificationDomService = {};
+
 async function isDebugAtivo() {
     try {
         const dados = await chrome.storage.local.get("debugAtivo");
@@ -7,6 +8,7 @@ async function isDebugAtivo() {
         return false;
     }
 }
+
 async function notificacoesInfo(...args) {
     const ativo = await isDebugAtivo();
     if (ativo) {
@@ -14,14 +16,21 @@ async function notificacoesInfo(...args) {
     }
 }
 
-function notificacoesError(...args) {
-    if (notificacoesDebugAtivo()) {
-        console.error(...args);
+async function notificacoesError(...args) {
+    const ativo = await isDebugAtivo();
+    if (ativo) {
+        console.error("[Notificacoes]", ...args);
+    }
+}
+
+async function notificacoesWarn(...args) {
+    const ativo = await isDebugAtivo();
+    if (ativo) {
+        console.warn("[Notificacoes]", ...args);
     }
 }
 
 globalThis.HabiteseApp.NotificationInspector = {
-
     localizarContainer() {
         return document.getElementById("notificationModalContentTable");
     },
@@ -41,12 +50,12 @@ globalThis.HabiteseApp.NotificationInspector = {
     extrairNotificacoes() {
         const container = this.localizarContainer();
         if (!container) {
-            return { erro: "Tabela de notificações não encontrada." };
+            return { erro: "Tabela de notificacoes nao encontrada." };
         }
 
         const formulario = document.getElementById("notificationModalForm");
         if (!formulario) {
-            return { erro: "Popup de notificações não encontrada." };
+            return { erro: "Popup de notificacoes nao encontrada." };
         }
 
         const linhas = Array.from(formulario.querySelectorAll("table tbody tr"));
@@ -99,7 +108,6 @@ globalThis.HabiteseApp.NotificationInspector = {
 };
 
 globalThis.HabiteseApp.NotificationDomService = {
-
     MAX_WAIT_MS: 5000,
 
     localizarBotao() {
@@ -107,7 +115,7 @@ globalThis.HabiteseApp.NotificationDomService = {
         const botao = document.getElementById(idBotao)
             || document.querySelector("#headerActions\:commandLinkNotifications");
         if (!botao) {
-            notificacoesError("[Habitese] Botão de notificações não encontrado.");
+            notificacoesError("[Habitese] Botao de notificacoes nao encontrado.");
         }
         return botao;
     },
@@ -132,7 +140,7 @@ globalThis.HabiteseApp.NotificationDomService = {
 
         const botao = this.localizarBotao();
         if (!botao && typeof window.Richfaces?.showModalPanel !== "function") {
-            return { erro: "Botão de notificações e API pública do RichFaces não encontradas." };
+            return { erro: "Botao de notificacoes e API publica do RichFaces nao encontradas." };
         }
 
         try {
@@ -158,8 +166,8 @@ globalThis.HabiteseApp.NotificationDomService = {
             let observer = null;
             const timeoutId = window.setTimeout(() => {
                 if (observer) observer.disconnect();
-                notificacoesError("[Habitese] Timeout aguardando popup de notificações.");
-                reject(new Error("Timeout aguardando popup de notificações."));
+                notificacoesError("[Habitese] Timeout aguardando popup de notificacoes.");
+                reject(new Error("Timeout aguardando popup de notificacoes."));
             }, this.MAX_WAIT_MS);
 
             observer = new MutationObserver(() => {
@@ -210,17 +218,17 @@ globalThis.HabiteseApp.NotificationDomService = {
             const resultado = this.extrairNotificacoes();
 
             if (!resultado || resultado.erro) {
-                notificacoesError("[Habitese] Erro ao ler popup de notificações.", resultado?.erro || "Erro desconhecido.");
-                return resultado || { erro: "Erro ao ler popup de notificações." };
+                notificacoesError("[Habitese] Erro ao ler popup de notificacoes.", resultado?.erro || "Erro desconhecido.");
+                return resultado || { erro: "Erro ao ler popup de notificacoes." };
             }
 
             if (!resultado.notificacoes || !resultado.notificacoes.length) {
-                notificacoesWarn("[Habitese] Popup de notificações aberta, mas sem dados.");
+                notificacoesWarn("[Habitese] Popup de notificacoes aberta, mas sem dados.");
             }
 
             return resultado;
         } catch (erro) {
-            notificacoesError("[Habitese] Falha ao automatizar notificações.", erro);
+            notificacoesError("[Habitese] Falha ao automatizar notificacoes.", erro);
             return { erro: erro.message };
         } finally {
             await this.fecharPopup();
