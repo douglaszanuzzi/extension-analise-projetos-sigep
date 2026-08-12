@@ -614,4 +614,13 @@ export async function iniciarPopup() {
     adicionarEvento("toggleDebug", "change", alternarDebug);
     adicionarEvento("btnExportarHistorico", "click", exportarHistoricoCSV);
     adicionarEvento("btnLimparHistorico", "click", limparHistorico);
+    adicionarEvento("btnPopout", "click", async () => {
+        await chrome.windows.create({
+            url: chrome.runtime.getURL("popup/popup.html"),
+            type: "popup",
+            width: 420,
+            height: 700
+        });
+        window.close();
+    });
 }

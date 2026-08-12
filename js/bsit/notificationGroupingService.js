@@ -59,7 +59,7 @@ function obterStatusTexto(status = NOTIFICATION_GROUP_STATUS.NEW) {
         [NOTIFICATION_GROUP_STATUS.NEW]: "Novo",
         [NOTIFICATION_GROUP_STATUS.PENDING]: "Aguardando",
         [NOTIFICATION_GROUP_STATUS.DONE]: "Concluído",
-        [NOTIFICATION_GROUP_STATUS.ARCHIVED]: "Arquivado"
+        [NOTIFICATION_GROUP_STATUS.ARCHIVED]: "Concluído"
     };
 
     return mapa[status] || "Novo";

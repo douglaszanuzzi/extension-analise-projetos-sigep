@@ -18,14 +18,24 @@
         <div class="topoConteudo">
             <h3>Monitoramento Inteligente de Processos SIGEP</h3>
         </div>
-        <button id="btnConfig" class="btnConfig" title="Configurações">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4f5b6d" stroke-width="2"
-                stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="3" />
-                <path
-                    d="M12 1v6m0 10v6m11-11h-6M7 12H1m16.5-7.5l-4.24 4.24M10.74 13.26L6.5 17.5m11 0l-4.24-4.24M10.74 10.74L6.5 6.5" />
-            </svg>
-        </button>
+        <div style="display:flex;gap:4px;">
+            <button id="btnPopout" class="btnConfig" title="Abrir em janela separada">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4f5b6d" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M15 3h6v6" />
+                    <path d="M10 14L21 3" />
+                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                </svg>
+            </button>
+            <button id="btnConfig" class="btnConfig" title="Configurações">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4f5b6d" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="3" />
+                    <path
+                        d="M12 1v6m0 10v6m11-11h-6M7 12H1m16.5-7.5l-4.24 4.24M10.74 13.26L6.5 17.5m11 0l-4.24-4.24M10.74 10.74L6.5 6.5" />
+                </svg>
+            </button>
+        </div>
     </header>
 
     <section id="resumo" class="resumo" aria-live="polite">
@@ -88,8 +98,7 @@
                 <option value="ALL">Todos</option>
                 <option value="NEW">Novos</option>
                 <option value="PENDING">Aguardando</option>
-                <option value="DONE">Concluídos</option>
-                <option value="ARCHIVED">Arquivados</option>
+                <option value="ARCHIVED">Concluídos</option>
             </select>
         </section>
         <div id="listaGruposNotificacoes" class="listaGruposNotificacoes"></div>
