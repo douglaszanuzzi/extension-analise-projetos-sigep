@@ -27,6 +27,23 @@ const estado = {
     totalNovos: 0
 };
 
+async function localizarAbaBsit() {
+    try {
+        const abas = await chrome.tabs.query({
+            url: [
+                "http://jatai.bsit-br.com.br/*",
+                "https://jatai.bsit-br.com.br/*",
+                "http://jatai.sigep.com.br/*",
+                "https://jatai.sigep.com.br/*"
+            ]
+        });
+        return abas[0] || null;
+    } catch (erro) {
+        Logger.error("Falha ao localizar aba do BSIT.", erro);
+        return null;
+    }
+}
+
 function alternarAba(novaAba) {
     const abas = ["analises", "notificacoes"];
     abas.forEach(aba => {
@@ -68,22 +85,17 @@ function mostrarConfiguracoes() {
 async function enviarAcao(acao) {
     Logger.info("ACAO ENVIADA:", acao);
     mostrarLoading("Buscando analises...");
-    let tab = null;
-    try {
-        [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    } catch (erro) {
-        Logger.error("Falha ao localizar aba ativa.", erro);
-        mostrarMensagem("Nao foi possivel localizar a aba ativa.");
-        esconderLoading();
-        return;
-    }
+
+    const tab = await localizarAbaBsit();
+
     if (!tab) {
-        mostrarMensagem("Nenhuma aba ativa encontrada.");
+        mostrarMensagem("Abra o BSIT/SIGEP no Chrome antes de buscar analises.");
         esconderLoading();
         return;
     }
+
     if (typeof tab.id !== "number") {
-        mostrarMensagem("Nao foi possivel comunicar com a aba ativa.");
+        mostrarMensagem("Nao foi possivel comunicar com a aba do BSIT.");
         esconderLoading();
         return;
     }
@@ -104,6 +116,7 @@ async function enviarAcao(acao) {
         esconderLoading();
         return;
     }
+
     if (resposta.erro) {
         mostrarMensagem(traduzirErro(resposta.erro));
         esconderLoading();
@@ -112,7 +125,6 @@ async function enviarAcao(acao) {
 
     let analises = Array.isArray(resposta.analises) ? resposta.analises : [];
 
-    // Sincronizar com a planilha e aplicar distribuicao
     if (acao === "analisarTabela" && analises.length > 0) {
         mostrarLoading("Distribuindo processos...");
         try {
@@ -336,7 +348,6 @@ async function salvarNovaSenha() {
     const resposta = document.getElementById("inputRespostaRecuperacao")?.value.trim() || "";
     const erro = document.getElementById("erroCriarSenha");
     if (!erro) return;
-
     if (!senha || senha.length < 3) {
         erro.textContent = "Senha deve ter pelo menos 3 caracteres.";
         erro.classList.remove("oculto");
@@ -352,7 +363,6 @@ async function salvarNovaSenha() {
         erro.classList.remove("oculto");
         return;
     }
-
     try {
         await chrome.storage.local.set({
             configSenha: senha,
@@ -375,7 +385,6 @@ async function mostrarModalRecuperacao() {
     const erro = document.getElementById("erroRecuperacao");
     const input = document.getElementById("inputRespostaRecuperacaoModal");
     if (!modal || !perguntaEl) return;
-
     try {
         const dados = await chrome.storage.local.get(["perguntaRecuperacao", "respostaRecuperacao"]);
         if (!dados.perguntaRecuperacao) {
@@ -402,16 +411,13 @@ async function confirmarRecuperacao() {
     const resposta = document.getElementById("inputRespostaRecuperacaoModal")?.value?.toLowerCase().trim() || "";
     const erro = document.getElementById("erroRecuperacao");
     if (!erro) return;
-
     try {
         const dados = await chrome.storage.local.get(["respostaRecuperacao", "configSenha"]);
-
         if (!dados.respostaRecuperacao) {
             erro.textContent = "Nenhuma resposta de seguranca encontrada. Recrie a senha.";
             erro.classList.remove("oculto");
             return;
         }
-
         if (resposta && resposta === dados.respostaRecuperacao) {
             await chrome.storage.local.set({ configSenha: "" });
             fecharModalRecuperacao();
@@ -462,27 +468,22 @@ async function carregarHistorico() {
     try {
         const dados = await chrome.storage.local.get("historicoDistribuicao");
         const historico = Array.isArray(dados.historicoDistribuicao) ? dados.historicoDistribuicao : [];
-
         container.innerHTML = "";
         resumo.innerHTML = "";
-
         if (historico.length === 0) {
             container.innerHTML = '<p style="font-size:12px;color:#687487;">Nenhuma distribuicao registrada.</p>';
             return;
         }
-
         const contagem = {};
         historico.forEach(entry => {
             contagem[entry.analista] = (contagem[entry.analista] || 0) + 1;
         });
-
         Object.entries(contagem).forEach(([nome, total]) => {
             const item = document.createElement("div");
             item.className = "resumoHistorico-item";
             item.innerHTML = `<strong>${total}</strong> ${nome}`;
             resumo.appendChild(item);
         });
-
         const recentes = [...historico].reverse().slice(0, 50);
         recentes.forEach(entry => {
             const item = document.createElement("div");
@@ -490,15 +491,12 @@ async function carregarHistorico() {
             const data = new Date(entry.data);
             const dataFmt = data.toLocaleDateString("pt-BR") + " " +
                 data.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-
             const spanAnalista = document.createElement("span");
             spanAnalista.className = "historico-item-analista";
             spanAnalista.textContent = entry.analista;
-
             const spanData = document.createElement("span");
             spanData.className = "historico-item-data";
             spanData.textContent = dataFmt;
-
             const spanDetalhes = document.createElement("span");
             spanDetalhes.className = "historico-item-detalhes";
             spanDetalhes.textContent = [
@@ -507,7 +505,6 @@ async function carregarHistorico() {
                 entry.usoImovel || "",
                 entry.tipo || ""
             ].filter(Boolean).join(" - ");
-
             item.appendChild(spanAnalista);
             item.appendChild(spanData);
             item.appendChild(spanDetalhes);
@@ -537,7 +534,6 @@ function exportarHistoricoCSV() {
                 `"${(e.tipo || "").replace(/"/g, '""')}"`
             ].join(",");
         }).join("\n");
-
         const csv = cabecalho + linhas;
         const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8;" });
         const url = URL.createObjectURL(blob);
