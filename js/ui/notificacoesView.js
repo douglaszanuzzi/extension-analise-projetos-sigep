@@ -124,11 +124,20 @@ function renderizarNotificacoes(grupos = [], estado = {}) {
     container.innerHTML = "";
 
     const filtro = obterFiltroStatusNotificacoes();
-    const gruposVisiveis = grupos.filter(grupo => {
+    const gruposVisiveis = grupos
+    .filter(grupo => {
         if (filtro === "ALL") {
             return grupo.status !== NOTIFICATION_GROUP_STATUS.ARCHIVED;
         }
         return grupo.status === filtro;
+    })
+    .sort((a, b) => {
+        // Mais antigas no topo (crescente), mais novas no final
+        const dataA = a.dataInicio || a.data || "";
+        const dataB = b.dataInicio || b.data || "";
+        if (dataA < dataB) return -1;
+        if (dataA > dataB) return 1;
+        return 0;
     });
 
     if (!gruposVisiveis.length) {
