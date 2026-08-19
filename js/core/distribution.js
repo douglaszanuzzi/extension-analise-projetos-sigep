@@ -25,6 +25,19 @@ async function distributionWarn(...args) {
     }
 }
 
+// Gera chave única do processo — usa buildingConstructionId se existir,
+// senão cria chave composta com proprietario + area + usoImovel
+function obterChaveProcesso(processo) {
+    const id = processo.buildingConstructionId;
+    if (id && String(id).trim()) return String(id).trim();
+    const fallback = [
+        (processo.proprietario || "").trim().toLowerCase(),
+        (processo.area || "").trim().toLowerCase(),
+        (processo.usoImovel || "").trim().toLowerCase()
+    ].join("|");
+    return fallback || null;
+}
+
 globalThis.HabiteseApp.Distribution = {
     ANALISTAS_PADRAO: ["Douglas", "Gabriel"],
     ANALISTAS: ["Douglas", "Gabriel"],
@@ -62,7 +75,7 @@ globalThis.HabiteseApp.Distribution = {
     calcularCargaAtual(processos, distribuicao) {
         const carga = this.criarCargaInicial();
         processos.forEach(processo => {
-            const id = processo.buildingConstructionId;
+            const id = obterChaveProcesso(processo);
             const responsavel = id ? distribuicao[id] : "";
             if (responsavel && Object.prototype.hasOwnProperty.call(carga, responsavel)) {
                 carga[responsavel]++;
@@ -133,11 +146,12 @@ globalThis.HabiteseApp.Distribution = {
             const processosNovos = [];
 
             processos.forEach(processo => {
-                const id = processo.buildingConstructionId;
+                const id = obterChaveProcesso(processo);
                 if (!id) {
                     processo.responsavel = "";
                     return;
                 }
+                processo._chaveDistribuicao = id;
                 idsAtuais.add(id);
                 if (distribuicao[id]) {
                     processo.responsavel = distribuicao[id];
@@ -181,7 +195,7 @@ globalThis.HabiteseApp.Distribution = {
 
                 // 4. Atribuir responsável aos processos novos
                 for (const processo of processosNovos) {
-                    const id = processo.buildingConstructionId;
+                    const id = processo._chaveDistribuicao || obterChaveProcesso(processo);
                     if (!id) continue;
 
                     if (distribuicao[id]) {
@@ -189,16 +203,15 @@ globalThis.HabiteseApp.Distribution = {
                         continue;
                     }
 
-                    // Fallback local (só chega aqui se a API falhou)
-                    const cargaAtual = this.calcularCargaAtual(processos, distribuicao);
-                    const escolha = this.escolherAnalistaPorCarga(cargaAtual, ultimoAnalista);
-                    processo.responsavel = escolha.analista;
-                    distribuicao[id] = escolha.analista;
-                    ultimoAnalista = escolha.analista;
+                    // Round-robin puro — alterna entre analistas
+                    const proximo = this.proximoAnalista(ultimoAnalista);
+                    processo.responsavel = proximo;
+                    distribuicao[id] = proximo;
+                    ultimoAnalista = proximo;
 
                     novasAtribuicoes.push({
                         data: new Date().toISOString(),
-                        analista: escolha.analista,
+                        analista: proximo,
                         buildingConstructionId: id,
                         proprietario: processo.proprietario || "",
                         area: processo.area || "",
@@ -217,9 +230,10 @@ globalThis.HabiteseApp.Distribution = {
                 });
                 idsResolvidos.forEach(id => delete distribuicao[id]);
 
-                // Limpar na planilha (async, não bloqueia)
-                if (ApiClient && ApiClient.limparResolvidos) {
-                    ApiClient.limparResolvidos(idsResolvidos).catch(erro => {
+                // Limpar na planilha apenas IDs reais (não chaves compostas com "|")
+                const idsLimpar = idsResolvidos.filter(id => !id.includes("|"));
+                if (ApiClient && ApiClient.limparResolvidos && idsLimpar.length > 0) {
+                    ApiClient.limparResolvidos(idsLimpar).catch(erro => {
                         distributionWarn("[Distribution] Falha ao limpar resolvidos na API.", erro);
                     });
                 }

@@ -29,7 +29,7 @@ globalThis.HabiteseApp.ApiClient = {
                     distribuicao: distribuicaoLocal,
                     ultimoAnalista: ultimoAnalista,
                     processos: processos.map(p => ({
-                        buildingConstructionId: p.buildingConstructionId || "",
+                        buildingConstructionId: p._chaveDistribuicao || p.buildingConstructionId || "",
                         proprietario: p.proprietario || "",
                         area: p.area || "",
                         usoImovel: p.usoImovel || "",
